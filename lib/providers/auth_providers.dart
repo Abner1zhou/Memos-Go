@@ -70,7 +70,6 @@ class AuthNotifier extends Notifier<AuthState> {
     final repo = ref.read(authRepositoryProvider);
     await repo.upsertAccount(account);
     await repo.setActiveAccount(account.id);
-    ref.invalidate(memoRepositoryProvider);
     final accounts = await repo.loadAccounts();
     state = AuthState(
       status: AuthStatus.signedIn,
@@ -84,7 +83,6 @@ class AuthNotifier extends Notifier<AuthState> {
     await repo.setActiveAccount(id);
     final accounts = await repo.loadAccounts();
     final active = accounts.firstWhere((a) => a.id == id);
-    ref.invalidate(memoRepositoryProvider);
     state = AuthState(
       status: AuthStatus.signedIn,
       accounts: accounts,

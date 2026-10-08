@@ -10,12 +10,16 @@ import 'features/memo_detail/memo_detail_page.dart';
 import 'features/memo_editor/memo_editor_page.dart';
 import 'features/memos/memos_page.dart';
 import 'features/memos/tag_memos_page.dart';
+import 'features/review/on_this_day_page.dart';
+import 'features/review/random_walk_page.dart';
 import 'features/search/search_page.dart';
 import 'features/settings/settings_page.dart';
-import 'features/shell/home_shell.dart';
-import 'features/tags/tags_page.dart';
+import 'features/trash/trash_page.dart';
 import 'providers/auth_providers.dart';
 import 'providers/settings_providers.dart';
+
+final _rootNavigator =
+    GlobalKey<NavigatorState>(debugLabel: 'root');
 
 final _routerProvider = Provider<GoRouter>((ref) {
   final auth = ValueNotifier<AuthStatus>(AuthStatus.loading);
@@ -39,66 +43,62 @@ final _routerProvider = Provider<GoRouter>((ref) {
         path: '/login',
         builder: (context, state) => const LoginPage(),
       ),
-      StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) =>
-            HomeShell(navigationShell: navigationShell),
-        branches: [
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: '/memos',
-              builder: (context, state) => const MemosPage(),
-              routes: [
-                GoRoute(
-                  path: 'new',
-                  parentNavigatorKey: _rootNavigator,
-                  builder: (context, state) => const MemoEditorPage(),
-                ),
-                GoRoute(
-                  path: 'detail/:uid',
-                  parentNavigatorKey: _rootNavigator,
-                  builder: (context, state) =>
-                      MemoDetailPage(uid: state.pathParameters['uid']!),
-                ),
-                GoRoute(
-                  path: 'edit/:uid',
-                  parentNavigatorKey: _rootNavigator,
-                  builder: (context, state) =>
-                      MemoEditorPage(editingUid: state.pathParameters['uid']!),
-                ),
-                GoRoute(
-                  path: 'tag/:tag',
-                  builder: (context, state) =>
-                      TagMemosPage(tag: state.pathParameters['tag']!),
-                ),
-              ],
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: '/search',
-              builder: (context, state) => const SearchPage(),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: '/tags',
-              builder: (context, state) => const TagsPage(),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: '/settings',
-              builder: (context, state) => const SettingsPage(),
-            ),
-          ]),
+      GoRoute(
+        path: '/memos',
+        builder: (context, state) => const MemosPage(),
+        routes: [
+          GoRoute(
+            path: 'new',
+            parentNavigatorKey: _rootNavigator,
+            builder: (context, state) => const MemoEditorPage(),
+          ),
+          GoRoute(
+            path: 'detail/:uid',
+            parentNavigatorKey: _rootNavigator,
+            builder: (context, state) =>
+                MemoDetailPage(uid: state.pathParameters['uid']!),
+          ),
+          GoRoute(
+            path: 'edit/:uid',
+            parentNavigatorKey: _rootNavigator,
+            builder: (context, state) =>
+                MemoEditorPage(editingUid: state.pathParameters['uid']!),
+          ),
+          GoRoute(
+            path: 'tag/:tag',
+            builder: (context, state) =>
+                TagMemosPage(tag: state.pathParameters['tag']!),
+          ),
         ],
+      ),
+      GoRoute(
+        path: '/search',
+        parentNavigatorKey: _rootNavigator,
+        builder: (context, state) => const SearchPage(),
+      ),
+      GoRoute(
+        path: '/settings',
+        parentNavigatorKey: _rootNavigator,
+        builder: (context, state) => const SettingsPage(),
+      ),
+      GoRoute(
+        path: '/trash',
+        parentNavigatorKey: _rootNavigator,
+        builder: (context, state) => const TrashPage(),
+      ),
+      GoRoute(
+        path: '/review',
+        parentNavigatorKey: _rootNavigator,
+        builder: (context, state) => const OnThisDayPage(),
+      ),
+      GoRoute(
+        path: '/random',
+        parentNavigatorKey: _rootNavigator,
+        builder: (context, state) => const RandomWalkPage(),
       ),
     ],
   );
 });
-
-final _rootNavigator =
-    GlobalKey<NavigatorState>(debugLabel: 'root');
 
 class MemosGoApp extends ConsumerWidget {
   const MemosGoApp({super.key});

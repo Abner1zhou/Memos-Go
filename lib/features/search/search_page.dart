@@ -25,7 +25,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final repo = ref.watch(memoRepositoryProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.searchTab)),
+      appBar: AppBar(title: Text(l10n.searchTitle)),
       body: Column(
         children: [
           Padding(

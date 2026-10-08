@@ -33,6 +33,12 @@ String formatDateTime(DateTime? time, {String locale = 'zh'}) {
   return DateFormat('yyyy/MM/dd HH:mm', locale).format(time.toLocal());
 }
 
+/// Absolute card timestamp, e.g. `2026-09-30 15:18`.
+String formatStamp(DateTime? time) {
+  if (time == null) return '';
+  return DateFormat('yyyy-MM-dd HH:mm').format(time.toLocal());
+}
+
 String formatBytes(int bytes) {
   if (bytes < 1024) return '${bytes}B';
   if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)}KB';

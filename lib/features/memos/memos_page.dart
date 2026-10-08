@@ -3,6 +3,7 @@ import '../../l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../core/widgets/attachment_image.dart';
 import '../../core/widgets/memo_markdown.dart';
 import '../../core/utils/formatters.dart';
@@ -10,6 +11,7 @@ import '../../data/models/models.dart';
 import '../../data/repositories/memo_repository.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/memo_providers.dart';
+import '../drawer/app_drawer.dart';
 
 class MemosPage extends ConsumerWidget {
   const MemosPage({super.key});
@@ -17,41 +19,114 @@ class MemosPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final auth = ref.watch(authProvider);
     final query = MemosQuery();
     final list = ref.watch(memosListProvider(query));
     final repo = ref.watch(memoRepositoryProvider);
-    final user = auth.activeAccount?.user;
 
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.memoTab),
-            if (user != null)
-              Text(
-                user.shownName,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-          ],
+        leading: Builder(
+          builder: (context) => IconButton(
+            tooltip: l10n.allMemos,
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
         ),
+        title: Text(l10n.appTitle),
         actions: [
           IconButton(
-            tooltip: l10n.servers,
-            icon: const Icon(Icons.dns_outlined),
-            onPressed: () => context.push('/settings'),
+            tooltip: l10n.searchTitle,
+            icon: const Icon(Icons.search),
+            onPressed: () => context.push('/search'),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/memos/new'),
-        icon: const Icon(Icons.edit_outlined),
-        label: Text(l10n.newMemo),
+        child: const Icon(Icons.add, size: 30),
       ),
-      body: MemosFeedBody(query: query, list: list, repo: repo),
+      body: Column(
+        children: [
+          const _FeaturePills(),
+          Expanded(
+            child: MemosFeedBody(query: query, list: list, repo: repo),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Flomo-style entry pills below the app bar.
+class _FeaturePills extends StatelessWidget {
+  const _FeaturePills();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SizedBox(
+      height: 46,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+        children: [
+          _Pill(
+            icon: Icons.calendar_today_outlined,
+            label: l10n.dailyReview,
+            onTap: () => context.push('/review'),
+          ),
+          const SizedBox(width: 8),
+          _Pill(
+            icon: Icons.shuffle_rounded,
+            label: l10n.randomWalk,
+            onTap: () => context.push('/random'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surface,
+      shape: StadiumBorder(
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
+      ),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Row(
+            children: [
+              Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -92,9 +167,12 @@ class MemosFeedBody extends ConsumerWidget {
     }
 
     return RefreshIndicator(
-      onRefresh: notifier.refresh,
+      onRefresh: () async {
+        await notifier.refresh();
+        ref.invalidate(memoInsightsProvider);
+      },
       child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 88),
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
         itemCount: list.memos.length + (list.hasMore ? 1 : 0),
         separatorBuilder: (_, _) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
@@ -110,7 +188,7 @@ class MemosFeedBody extends ConsumerWidget {
             );
           }
           final memo = list.memos[index];
-          return MemoCard(memo: memo, repo: repo!);
+          return MemoCard(memo: memo, repo: repo ?? ref.read(memoRepositoryProvider)!);
         },
       ),
     );
@@ -171,10 +249,10 @@ class MemoCard extends ConsumerWidget {
 
     return Card(
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         onTap: () => context.push('/memos/detail/${memo.uid}'),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+          padding: const EdgeInsets.fromLTRB(14, 12, 10, 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -184,22 +262,28 @@ class MemoCard extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.only(right: 6),
                       child: Icon(Icons.push_pin_rounded,
-                          size: 15, color: theme.colorScheme.primary),
+                          size: 14, color: theme.colorScheme.primary),
                     ),
                   Expanded(
                     child: Text(
-                      relativeTime(memo.createTime,
-                          locale: Localizations.localeOf(context)
-                              .languageCode),
+                      formatStamp(memo.createTime),
                       style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 12,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
-                  VisibilityBadge(visibility: memo.visibility),
+                  if (memo.visibility != MemoVisibility.private)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 2),
+                      child: VisibilityBadge(
+                          visibility: memo.visibility, compact: true),
+                    ),
                   PopupMenuButton<String>(
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 160),
+                    icon: Icon(Icons.more_horiz,
+                        size: 22, color: theme.colorScheme.onSurfaceVariant),
                     onSelected: (action) =>
                         _onAction(context, ref, action, query),
                     itemBuilder: (context) => [
@@ -244,7 +328,7 @@ class MemoCard extends ConsumerWidget {
               ),
               if (memo.content.trim().isNotEmpty) ...[
                 const SizedBox(height: 2),
-                MemoMarkdown(
+                _ExpandableContent(
                   content: memo.content,
                   onTagTap: (tag) => context.push('/memos/tag/$tag'),
                 ),
@@ -253,7 +337,7 @@ class MemoCard extends ConsumerWidget {
                 const SizedBox(height: 8),
                 MemoAttachmentsGallery(memo: memo, repo: repo),
               ],
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
             ],
           ),
         ),
@@ -298,7 +382,7 @@ class MemoCard extends ConsumerWidget {
           try {
             await ref.read(memoRepositoryProvider)!.deleteMemo(memo.uid);
             notifier.removeLocal(memo.name);
-            ref.invalidate(tagCountsProvider);
+            ref.invalidate(memoInsightsProvider);
             if (context.mounted) _snack(context, l10n.deleted);
           } catch (e) {
             if (context.mounted) _snack(context, e.toString());
@@ -311,5 +395,79 @@ class MemoCard extends ConsumerWidget {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+/// Memo body that collapses long content behind an expand/collapse link,
+/// mirroring flomo's card behavior.
+class _ExpandableContent extends StatefulWidget {
+  const _ExpandableContent({required this.content, this.onTagTap});
+
+  final String content;
+  final ValueChanged<String>? onTagTap;
+
+  @override
+  State<_ExpandableContent> createState() => _ExpandableContentState();
+}
+
+class _ExpandableContentState extends State<_ExpandableContent> {
+  static const _maxLines = 10;
+  static const _maxChars = 400;
+
+  bool _expanded = false;
+
+  bool get _isLong {
+    final lineCount = '\n'.allMatches(widget.content).length + 1;
+    return lineCount > _maxLines || widget.content.length > _maxChars;
+  }
+
+  String get _collapsedText {
+    final lines = widget.content.split('\n');
+    var text = lines.take(_maxLines).join('\n');
+    if (text.length > _maxChars) text = text.substring(0, _maxChars);
+    // Back off when the cut would leave an unclosed ``` fence.
+    if ('```'.allMatches(text).length.isOdd) {
+      final fenceAt = text.lastIndexOf('```');
+      if (fenceAt > 0) text = text.substring(0, fenceAt);
+    }
+    return text.trimRight();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final collapsed = !_expanded && _isLong;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        MemoMarkdown(
+          content: collapsed ? _collapsedText : widget.content,
+          onTagTap: widget.onTagTap,
+        ),
+        if (_isLong)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: TextButton.icon(
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                minimumSize: const Size(0, 30),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                foregroundColor: AppTheme.tagBlue,
+              ),
+              onPressed: () => setState(() => _expanded = !_expanded),
+              icon: Icon(
+                _expanded ? Icons.expand_less : Icons.expand_more,
+                size: 18,
+              ),
+              label: Text(
+                _expanded ? l10n.collapse : l10n.expand,
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }

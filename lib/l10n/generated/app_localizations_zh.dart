@@ -16,13 +16,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoTab => '笔记';
 
   @override
-  String get searchTab => '搜索';
-
-  @override
-  String get tagsTab => '标签';
-
-  @override
-  String get settingsTab => '设置';
+  String get searchTitle => '搜索';
 
   @override
   String get loginTitle => '登录 Memos';
@@ -246,4 +240,60 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get createTokenGuide => '打开网页版 → 设置 → 访问令牌 → 创建令牌，然后粘贴到此处';
+
+  @override
+  String get allMemos => '全部笔记';
+
+  @override
+  String get dailyReview => '每日回顾';
+
+  @override
+  String get randomWalk => '随机漫步';
+
+  @override
+  String get trash => '回收站';
+
+  @override
+  String get restore => '恢复';
+
+  @override
+  String get restored => '已恢复';
+
+  @override
+  String get deletePermanently => '彻底删除';
+
+  @override
+  String get deletePermanentlyConfirm => '彻底删除这条笔记？该操作无法撤销。';
+
+  @override
+  String get emptyTrash => '回收站是空的';
+
+  @override
+  String get expand => '展开';
+
+  @override
+  String get collapse => '收起';
+
+  @override
+  String get pinnedTags => '置顶标签';
+
+  @override
+  String get statNotes => '笔记';
+
+  @override
+  String get statTags => '标签';
+
+  @override
+  String get statDays => '天';
+
+  @override
+  String yearsAgoToday(int years) {
+    return '$years 年前的今天';
+  }
+
+  @override
+  String get walkAgain => '再逛逛';
+
+  @override
+  String get noReviewYet => '今天还没有往年的回忆，继续记录吧';
 }

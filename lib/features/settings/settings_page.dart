@@ -166,7 +166,9 @@ class SettingsPage extends ConsumerWidget {
     );
     if (confirmed == true) {
       await ref.read(authProvider.notifier).signOut();
-      if (context.mounted) context.go('/login');
+      // No explicit navigation: when the last account is gone the auth status
+      // flips to signedOut and the router redirect takes us to /login;
+      // navigating here too would race with it.
     }
   }
 }

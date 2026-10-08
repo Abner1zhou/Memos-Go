@@ -207,7 +207,7 @@ class _MemoDetailPageState extends ConsumerState<MemoDetailPage> {
             ref
                 .read(memosListProvider(const MemosQuery()).notifier)
                 .removeLocal(memo.name);
-            ref.invalidate(tagCountsProvider);
+            ref.invalidate(memoInsightsProvider);
             if (mounted) context.pop();
           } catch (e) {
             _snack(e.toString());

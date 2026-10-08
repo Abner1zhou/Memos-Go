@@ -16,13 +16,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoTab => 'Memos';
 
   @override
-  String get searchTab => 'Search';
-
-  @override
-  String get tagsTab => 'Tags';
-
-  @override
-  String get settingsTab => 'Settings';
+  String get searchTitle => 'Search';
 
   @override
   String get loginTitle => 'Sign in to Memos';
@@ -249,4 +243,61 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get createTokenGuide =>
       'Open the web app → Settings → Access Tokens → create, then paste it here';
+
+  @override
+  String get allMemos => 'All memos';
+
+  @override
+  String get dailyReview => 'Daily review';
+
+  @override
+  String get randomWalk => 'Random walk';
+
+  @override
+  String get trash => 'Trash';
+
+  @override
+  String get restore => 'Restore';
+
+  @override
+  String get restored => 'Restored';
+
+  @override
+  String get deletePermanently => 'Delete permanently';
+
+  @override
+  String get deletePermanentlyConfirm =>
+      'Delete this memo permanently? This cannot be undone.';
+
+  @override
+  String get emptyTrash => 'Trash is empty';
+
+  @override
+  String get expand => 'Expand';
+
+  @override
+  String get collapse => 'Collapse';
+
+  @override
+  String get pinnedTags => 'Pinned tags';
+
+  @override
+  String get statNotes => 'Notes';
+
+  @override
+  String get statTags => 'Tags';
+
+  @override
+  String get statDays => 'Days';
+
+  @override
+  String yearsAgoToday(int years) {
+    return '$years years ago today';
+  }
+
+  @override
+  String get walkAgain => 'Walk again';
+
+  @override
+  String get noReviewYet => 'No memories for today yet — keep writing';
 }

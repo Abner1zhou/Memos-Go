@@ -3,6 +3,7 @@ import 'package:markdown/markdown.dart' as md;
 import '../../l10n/generated/app_localizations.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../data/models/models.dart';
 
 /// Renders memo content as Markdown. `#tags` are rewritten into internal
@@ -43,7 +44,6 @@ class MemoMarkdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final linkColor = theme.colorScheme.primary;
     return MarkdownBody(
       data: _linkifyTags(content),
       selectable: selectable,
@@ -71,7 +71,7 @@ class MemoMarkdown extends StatelessWidget {
         ),
         listBullet: theme.textTheme.bodyMedium,
         checkbox: theme.textTheme.bodyMedium,
-        a: TextStyle(color: linkColor, fontWeight: FontWeight.w500),
+        a: TextStyle(color: AppTheme.tagBlue, fontWeight: FontWeight.w500),
       ),
       onTapLink: (text, href, title) {
         if (href == null) return;
@@ -85,11 +85,12 @@ class MemoMarkdown extends StatelessWidget {
   }
 }
 
-/// Visibility badge shown on memo cards.
+/// Visibility badge shown on memo cards. [compact] renders the icon only.
 class VisibilityBadge extends StatelessWidget {
-  const VisibilityBadge({super.key, required this.visibility});
+  const VisibilityBadge({super.key, required this.visibility, this.compact = false});
 
   final MemoVisibility visibility;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +103,9 @@ class VisibilityBadge extends StatelessWidget {
       MemoVisibility.public => (Icons.public, l10n.visibilityPublic),
       MemoVisibility.space => (Icons.workspaces_outline, l10n.visibilitySpace),
     };
+    if (compact) {
+      return Icon(icon, size: 14, color: theme.colorScheme.onSurfaceVariant);
+    }
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

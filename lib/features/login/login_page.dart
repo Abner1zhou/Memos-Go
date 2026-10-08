@@ -92,7 +92,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               token: _tokenController.text.trim(),
             );
       }
-      if (mounted) context.go('/memos');
+      if (mounted) {
+        // The router redirect (refreshListenable on auth status) owns the
+        // signed-out -> /memos transition; navigating here as well races with
+        // it and can register the same page key twice (navigator
+        // keyReservation assertion). When the login page was pushed on top of
+        // the shell (add-server flow) the status doesn't change, so just
+        // unwind to the page below.
+        if (context.canPop()) {
+          context.pop();
+        }
+      }
     } on MemosApiException catch (e) {
       setState(() => _error = '${l10n.loginFailed}: ${e.message}');
     } catch (_) {
@@ -124,7 +134,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       height: 72,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: AppTheme.seedColor,
+                        color: AppTheme.brandGreen,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Icon(Icons.edit_note_rounded,

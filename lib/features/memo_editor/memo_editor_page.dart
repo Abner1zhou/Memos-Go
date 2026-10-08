@@ -160,7 +160,7 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
             .read(memosListProvider(const MemosQuery()).notifier)
             .upsertLocal(updated.copyWith(attachments: _attachments));
       }
-      ref.invalidate(tagCountsProvider);
+      ref.invalidate(memoInsightsProvider);
       if (mounted) context.pop();
     } catch (e) {
       _snack('${l10n.save}: ${_messageOf(e)}');

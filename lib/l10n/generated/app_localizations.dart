@@ -110,23 +110,11 @@ abstract class AppLocalizations {
   /// **'笔记'**
   String get memoTab;
 
-  /// No description provided for @searchTab.
+  /// No description provided for @searchTitle.
   ///
   /// In zh, this message translates to:
   /// **'搜索'**
-  String get searchTab;
-
-  /// No description provided for @tagsTab.
-  ///
-  /// In zh, this message translates to:
-  /// **'标签'**
-  String get tagsTab;
-
-  /// No description provided for @settingsTab.
-  ///
-  /// In zh, this message translates to:
-  /// **'设置'**
-  String get settingsTab;
+  String get searchTitle;
 
   /// No description provided for @loginTitle.
   ///
@@ -565,6 +553,114 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'打开网页版 → 设置 → 访问令牌 → 创建令牌，然后粘贴到此处'**
   String get createTokenGuide;
+
+  /// No description provided for @allMemos.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部笔记'**
+  String get allMemos;
+
+  /// No description provided for @dailyReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日回顾'**
+  String get dailyReview;
+
+  /// No description provided for @randomWalk.
+  ///
+  /// In zh, this message translates to:
+  /// **'随机漫步'**
+  String get randomWalk;
+
+  /// No description provided for @trash.
+  ///
+  /// In zh, this message translates to:
+  /// **'回收站'**
+  String get trash;
+
+  /// No description provided for @restore.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复'**
+  String get restore;
+
+  /// No description provided for @restored.
+  ///
+  /// In zh, this message translates to:
+  /// **'已恢复'**
+  String get restored;
+
+  /// No description provided for @deletePermanently.
+  ///
+  /// In zh, this message translates to:
+  /// **'彻底删除'**
+  String get deletePermanently;
+
+  /// No description provided for @deletePermanentlyConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'彻底删除这条笔记？该操作无法撤销。'**
+  String get deletePermanentlyConfirm;
+
+  /// No description provided for @emptyTrash.
+  ///
+  /// In zh, this message translates to:
+  /// **'回收站是空的'**
+  String get emptyTrash;
+
+  /// No description provided for @expand.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开'**
+  String get expand;
+
+  /// No description provided for @collapse.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起'**
+  String get collapse;
+
+  /// No description provided for @pinnedTags.
+  ///
+  /// In zh, this message translates to:
+  /// **'置顶标签'**
+  String get pinnedTags;
+
+  /// No description provided for @statNotes.
+  ///
+  /// In zh, this message translates to:
+  /// **'笔记'**
+  String get statNotes;
+
+  /// No description provided for @statTags.
+  ///
+  /// In zh, this message translates to:
+  /// **'标签'**
+  String get statTags;
+
+  /// No description provided for @statDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'天'**
+  String get statDays;
+
+  /// No description provided for @yearsAgoToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'{years} 年前的今天'**
+  String yearsAgoToday(int years);
+
+  /// No description provided for @walkAgain.
+  ///
+  /// In zh, this message translates to:
+  /// **'再逛逛'**
+  String get walkAgain;
+
+  /// No description provided for @noReviewYet.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天还没有往年的回忆，继续记录吧'**
+  String get noReviewYet;
 }
 
 class _AppLocalizationsDelegate

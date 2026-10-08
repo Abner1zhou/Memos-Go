@@ -24,7 +24,20 @@ enum MemoVisibility {
       };
 }
 
-enum MemoState { normal, archived, deleted }
+enum MemoState {
+  normal('NORMAL'),
+  archived('ARCHIVED'),
+  deleted('DELETED');
+
+  const MemoState(this.wireName);
+  final String wireName;
+
+  static MemoState fromWire(String? value) => switch (value) {
+        'ARCHIVED' => MemoState.archived,
+        'DELETED' => MemoState.deleted,
+        _ => MemoState.normal,
+      };
+}
 
 @immutable
 class User {
@@ -155,11 +168,7 @@ class Memo {
 
   factory Memo.fromJson(Map<String, dynamic> json) => Memo(
         name: json['name'] as String? ?? '',
-        state: switch (json['state'] as String?) {
-          'ARCHIVED' => MemoState.archived,
-          'DELETED' => MemoState.deleted,
-          _ => MemoState.normal,
-        },
+        state: MemoState.fromWire(json['state'] as String?),
         creator: json['creator'] as String? ?? '',
         content: json['content'] as String? ?? '',
         visibility: MemoVisibility.fromWire(json['visibility'] as String?),
@@ -185,17 +194,19 @@ class Memo {
         'content': content,
         'visibility': visibility.wireName,
         'pinned': pinned,
+        'state': state.wireName,
       };
 
   Memo copyWith({
     String? content,
     MemoVisibility? visibility,
     bool? pinned,
+    MemoState? state,
     List<Attachment>? attachments,
   }) =>
       Memo(
         name: name,
-        state: state,
+        state: state ?? this.state,
         creator: creator,
         content: content ?? this.content,
         visibility: visibility ?? this.visibility,

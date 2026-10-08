@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/api/memos_api_client.dart';
 import '../data/models/models.dart';
@@ -40,17 +41,22 @@ final memosListProvider = NotifierProvider.autoDispose
     .family<MemosListNotifier, MemosListState, MemosQuery>(MemosListNotifier.new);
 
 class MemosQuery {
-  const MemosQuery({this.search, this.tag});
+  const MemosQuery({this.search, this.tag, this.state});
 
   final String? search;
   final String? tag;
 
-  @override
-  bool operator ==(Object other) =>
-      other is MemosQuery && other.search == search && other.tag == tag;
+  /// Memo state wire name to filter by, e.g. `DELETED` for the trash view.
+  final String? state;
 
   @override
-  int get hashCode => Object.hash(search, tag);
+  bool operator ==(Object other) => other is MemosQuery &&
+      other.search == search &&
+      other.tag == tag &&
+      other.state == state;
+
+  @override
+  int get hashCode => Object.hash(search, tag, state);
 }
 
 class MemosListNotifier
@@ -66,7 +72,7 @@ class MemosListNotifier
   }
 
   String? _filterOf(MemosQuery q) {
-    final f = buildMemoFilter(query: q.search, tag: q.tag);
+    final f = buildMemoFilter(query: q.search, tag: q.tag, state: q.state);
     return f.isEmpty ? null : f;
   }
 
@@ -165,24 +171,97 @@ String _messageOf(Object e) {
   return e.toString();
 }
 
-/// Tag counts for the tags tab; falls back to client-side aggregation from
-/// the loaded memo feed when the server rejects the stats call.
-final tagCountsProvider =
-    FutureProvider.autoDispose<Map<String, int>>((ref) async {
+/// Aggregated account insights for the drawer: recent memos, tag counts and a
+/// per-day activity map backing the stats row and heatmap.
+class MemoInsights {
+  const MemoInsights({
+    this.memos = const [],
+    this.tagCounts = const {},
+    this.dayCounts = const {},
+    this.hasMore = false,
+    this.oldest,
+  });
+
+  final List<Memo> memos;
+  final Map<String, int> tagCounts;
+
+  /// `yyyy-MM-dd` (local) -> number of memos created that day.
+  final Map<String, int> dayCounts;
+
+  /// True when the aggregation window hit the page cap, i.e. counts are a
+  /// lower bound ("500+").
+  final bool hasMore;
+  final DateTime? oldest;
+
+  int get memoCount => memos.length;
+}
+
+/// Single fetch (up to [windowSize] memos) powering drawer stats, the heatmap,
+/// daily review and random walk. Invalidate after create/delete mutations.
+final memoInsightsProvider =
+    FutureProvider.autoDispose<MemoInsights>((ref) async {
   final repo = ref.watch(memoRepositoryProvider);
-  if (repo == null) return {};
+  if (repo == null) return const MemoInsights();
+
+  const windowSize = 500;
+  MemoListPage page;
   try {
-    final stats = await repo.userStats();
-    if (stats.tagCounts.isNotEmpty) return stats.tagCounts;
+    page = await repo.listMemos(pageSize: windowSize);
   } catch (_) {
-    // fall through to client-side aggregation
+    // Older servers reject large page sizes; fall back to the default page.
+    page = await repo.listMemos();
   }
-  final feed = await repo.listMemos(pageSize: 500);
-  final counts = <String, int>{};
-  for (final memo in feed.memos) {
+
+  final tagCounts = <String, int>{};
+  final dayCounts = <String, int>{};
+  DateTime? oldest;
+  for (final memo in page.memos) {
     for (final tag in memo.tags) {
-      counts[tag] = (counts[tag] ?? 0) + 1;
+      tagCounts[tag] = (tagCounts[tag] ?? 0) + 1;
+    }
+    final created = memo.createTime?.toLocal();
+    if (created != null) {
+      final key =
+          '${created.year.toString().padLeft(4, '0')}-'
+          '${created.month.toString().padLeft(2, '0')}-'
+          '${created.day.toString().padLeft(2, '0')}';
+      dayCounts[key] = (dayCounts[key] ?? 0) + 1;
+      // List is newest-first, so the last seen date is the oldest.
+      oldest = created;
     }
   }
-  return counts;
+  return MemoInsights(
+    memos: page.memos,
+    tagCounts: tagCounts,
+    dayCounts: dayCounts,
+    hasMore: page.nextPageToken.isNotEmpty,
+    oldest: oldest,
+  );
 });
+
+/// Tag names pinned to the top of the drawer, persisted locally.
+final pinnedTagsProvider =
+    NotifierProvider<PinnedTagsNotifier, List<String>>(PinnedTagsNotifier.new);
+
+class PinnedTagsNotifier extends Notifier<List<String>> {
+  static const _prefsKey = 'memos_go.pinned_tags';
+
+  @override
+  List<String> build() {
+    _load();
+    return const [];
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    state = prefs.getStringList(_prefsKey) ?? const [];
+  }
+
+  Future<void> toggle(String tag) async {
+    state = state.contains(tag)
+        ? state.where((t) => t != tag).toList()
+        : [...state, tag];
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_prefsKey, state);
+  }
+}

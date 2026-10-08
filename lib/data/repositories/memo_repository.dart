@@ -42,7 +42,7 @@ class MemoRepository {
   }
 
   Future<Memo> updateMemo(Memo memo) =>
-      _api.updateMemo(memo, ['content', 'visibility', 'pinned']);
+      _api.updateMemo(memo, ['content', 'visibility', 'pinned', 'state']);
 
   /// Replaces the memo's attachment set; pass an empty list to clear.
   Future<void> updateMemoAttachments(String uid, List<Attachment> attachments) =>
@@ -70,13 +70,15 @@ class MemoRepository {
 }
 
 /// Builds a CEL filter expression for the ListMemos `filter` parameter,
-/// combining a free-text query and/or a tag.
-String buildMemoFilter({String? query, String? tag}) {
+/// combining a free-text query and/or a tag and/or a memo state.
+String buildMemoFilter({String? query, String? tag, String? state}) {
   final parts = <String>[];
   final q = query?.trim() ?? '';
   if (q.isNotEmpty) parts.add('content.contains("${_escapeCel(q)}")');
   final t = tag?.trim() ?? '';
   if (t.isNotEmpty) parts.add('"${_escapeCel(t)}" in tags');
+  final s = state?.trim() ?? '';
+  if (s.isNotEmpty) parts.add('state == "${_escapeCel(s)}"');
   return parts.join(' && ');
 }
 
