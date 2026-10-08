@@ -1,4 +1,4 @@
-package com.abner.memos_go
+package com.abner.memosgo
 
 import io.flutter.embedding.android.FlutterActivity
 
