@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/navigation.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/memo_providers.dart';
@@ -358,7 +359,7 @@ class _TreeTagRow extends ConsumerWidget {
       borderRadius: BorderRadius.circular(10),
       onTap: () {
         Navigator.of(context).pop();
-        context.push('/memos/tag/${Uri.encodeComponent(node.path)}');
+        pushTagMemos(context, node.path);
       },
       child: Padding(
         padding: EdgeInsets.only(left: 2.0 + depth * 18, right: 2),
@@ -468,7 +469,7 @@ class _TagRow extends ConsumerWidget {
       borderRadius: BorderRadius.circular(10),
       onTap: () {
         Navigator.of(context).pop();
-        context.push('/memos/tag/${Uri.encodeComponent(tag)}');
+        pushTagMemos(context, tag);
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 7),

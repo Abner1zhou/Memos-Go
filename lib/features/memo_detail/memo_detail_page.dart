@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/utils/formatters.dart';
+import '../../core/utils/navigation.dart';
 import '../../core/widgets/attachment_image.dart';
 import '../../core/widgets/memo_markdown.dart';
 import '../../data/models/models.dart';
@@ -129,7 +130,7 @@ class _MemoDetailPageState extends ConsumerState<MemoDetailPage> {
                       MemoMarkdown(
                         content: _memo!.content,
                         selectable: true,
-                        onTagTap: (tag) => context.push('/memos/tag/$tag'),
+                        onTagTap: (tag) => pushTagMemos(context, tag),
                       ),
                       if (_memo!.attachments.isNotEmpty) ...[
                         const SizedBox(height: 18),
@@ -159,8 +160,7 @@ class _MemoDetailPageState extends ConsumerState<MemoDetailPage> {
                             for (final tag in _memo!.tags)
                               ActionChip(
                                 label: Text('#$tag'),
-                                onPressed: () =>
-                                    context.push('/memos/tag/$tag'),
+                                onPressed: () => pushTagMemos(context, tag),
                               ),
                           ],
                         ),

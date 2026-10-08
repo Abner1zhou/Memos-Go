@@ -18,8 +18,10 @@ import 'features/trash/trash_page.dart';
 import 'providers/auth_providers.dart';
 import 'providers/settings_providers.dart';
 
-final _rootNavigator =
-    GlobalKey<NavigatorState>(debugLabel: 'root');
+/// Root navigator for the app router; public so tests can build a GoRouter
+/// over [buildAppRoutes], whose sub-routes target this key.
+@visibleForTesting
+final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
 final _routerProvider = Provider<GoRouter>((ref) {
   final auth = ValueNotifier<AuthStatus>(AuthStatus.loading);
@@ -29,7 +31,7 @@ final _routerProvider = Provider<GoRouter>((ref) {
       fireImmediately: true);
 
   return GoRouter(
-    navigatorKey: _rootNavigator,
+    navigatorKey: rootNavigatorKey,
     refreshListenable: auth,
     initialLocation: '/memos',
     redirect: (context, state) {
@@ -38,7 +40,14 @@ final _routerProvider = Provider<GoRouter>((ref) {
       if (!signedIn) return loggingIn ? null : '/login';
       return loggingIn ? '/memos' : null;
     },
-    routes: [
+    routes: buildAppRoutes(),
+  );
+});
+
+/// Exposed for tests so they match against the real route table
+/// (e.g. percent-encoded tag path parameters).
+@visibleForTesting
+List<RouteBase> buildAppRoutes() => [
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginPage(),
@@ -49,18 +58,18 @@ final _routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: 'new',
-            parentNavigatorKey: _rootNavigator,
+            parentNavigatorKey: rootNavigatorKey,
             builder: (context, state) => const MemoEditorPage(),
           ),
           GoRoute(
             path: 'detail/:uid',
-            parentNavigatorKey: _rootNavigator,
+            parentNavigatorKey: rootNavigatorKey,
             builder: (context, state) =>
                 MemoDetailPage(uid: state.pathParameters['uid']!),
           ),
           GoRoute(
             path: 'edit/:uid',
-            parentNavigatorKey: _rootNavigator,
+            parentNavigatorKey: rootNavigatorKey,
             builder: (context, state) =>
                 MemoEditorPage(editingUid: state.pathParameters['uid']!),
           ),
@@ -73,32 +82,30 @@ final _routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/search',
-        parentNavigatorKey: _rootNavigator,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const SearchPage(),
       ),
       GoRoute(
         path: '/settings',
-        parentNavigatorKey: _rootNavigator,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const SettingsPage(),
       ),
       GoRoute(
         path: '/trash',
-        parentNavigatorKey: _rootNavigator,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const TrashPage(),
       ),
       GoRoute(
         path: '/review',
-        parentNavigatorKey: _rootNavigator,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const OnThisDayPage(),
       ),
       GoRoute(
         path: '/random',
-        parentNavigatorKey: _rootNavigator,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const RandomWalkPage(),
       ),
-    ],
-  );
-});
+    ];
 
 class MemosGoApp extends ConsumerWidget {
   const MemosGoApp({super.key});

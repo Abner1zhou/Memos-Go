@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/attachment_image.dart';
 import '../../core/widgets/memo_markdown.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/navigation.dart';
 import '../../data/models/models.dart';
 import '../../data/repositories/memo_repository.dart';
 import '../../providers/auth_providers.dart';
@@ -330,7 +331,7 @@ class MemoCard extends ConsumerWidget {
                 const SizedBox(height: 2),
                 _ExpandableContent(
                   content: memo.content,
-                  onTagTap: (tag) => context.push('/memos/tag/$tag'),
+                  onTagTap: (tag) => pushTagMemos(context, tag),
                 ),
               ],
               if (memo.attachments.isNotEmpty) ...[
