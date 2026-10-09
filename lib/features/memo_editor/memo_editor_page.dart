@@ -54,6 +54,9 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
             TextSelection.collapsed(offset: _controller.text.length);
       }
     }
+    // Rebuild on text *and* caret moves so the tag suggestion row tracks
+    // the `#token` under the cursor.
+    _controller.addListener(_onControllerChanged);
   }
 
   @override
@@ -61,6 +64,48 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// Known tags ranked for [query]: startsWith matches first, then contains,
+  /// each by usage count. An empty query surfaces the most-used tags.
+  static const _maxTagSuggestions = 8;
+
+  List<MapEntry<String, int>> _suggestTags(
+      String query, Map<String, int> known) {
+    final q = query.toLowerCase();
+    final starts = <MapEntry<String, int>>[];
+    final contains = <MapEntry<String, int>>[];
+    known.forEach((tag, count) {
+      final lower = tag.toLowerCase();
+      if (lower == q) return;
+      if (lower.startsWith(q)) {
+        starts.add(MapEntry(tag, count));
+      } else if (q.isNotEmpty && lower.contains(q)) {
+        contains.add(MapEntry(tag, count));
+      }
+    });
+    int byUsage(MapEntry<String, int> a, MapEntry<String, int> b) =>
+        b.value.compareTo(a.value);
+    starts.sort(byUsage);
+    contains.sort(byUsage);
+    return [...starts, ...contains].take(_maxTagSuggestions).toList();
+  }
+
+  /// Replaces the `#query` token under the caret with the picked [tag].
+  void _applyTagSuggestion(String tag) {
+    final token = tagTokenAt(_controller.text, _controller.selection.baseOffset);
+    if (token == null) return;
+    final replacement = '#$tag ';
+    _controller.value = TextEditingValue(
+      text: _controller.text.replaceRange(token.start, token.end, replacement),
+      selection:
+          TextSelection.collapsed(offset: token.start + replacement.length),
+    );
+    _focusNode.requestFocus();
   }
 
   Future<void> _loadMemo() async {
@@ -185,6 +230,17 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
     final theme = Theme.of(context);
     final tags = extractTags(_controller.text).toList()..sort();
 
+    // Only fetch the tag directory once the user starts typing a `#tag`.
+    final token =
+        tagTokenAt(_controller.text, _controller.selection.baseOffset);
+    final suggestions = token == null
+        ? const <MapEntry<String, int>>[]
+        : _suggestTags(
+            token.query,
+            ref.watch(userTagsProvider).valueOrNull ??
+                const <String, int>{},
+          );
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_editing == null ? l10n.newMemo : l10n.editMemo),
@@ -241,7 +297,6 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
                             filled: false,
                             hintText: l10n.memoContentHint,
                           ),
-                          onChanged: (_) => setState(() {}),
                         ),
                       ),
                     ),
@@ -281,6 +336,24 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
                                 ),
                               ),
                           ],
+                        ),
+                      ),
+                    if (suggestions.isNotEmpty)
+                      SizedBox(
+                        height: 40,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          itemCount: suggestions.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 6),
+                          itemBuilder: (context, index) {
+                            final tag = suggestions[index].key;
+                            return ActionChip(
+                              label: Text('#$tag'),
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () => _applyTagSuggestion(tag),
+                            );
+                          },
                         ),
                       ),
                     _Toolbar(onInsert: _insertMarkdown),

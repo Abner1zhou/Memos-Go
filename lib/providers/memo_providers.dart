@@ -307,6 +307,36 @@ final memoInsightsProvider =
   );
 });
 
+/// All tags known for the active account as `tag -> memo count`, powering
+/// tag autocomplete in the editor. Uses the server's getStats endpoint and
+/// falls back to parsing recent memos on servers where it is unavailable.
+final userTagsProvider =
+    FutureProvider.autoDispose<Map<String, int>>((ref) async {
+  final repo = ref.watch(memoRepositoryProvider);
+  if (repo == null) return const {};
+  try {
+    final stats = await repo.userStats();
+    if (stats.tagCounts.isNotEmpty) return stats.tagCounts;
+  } catch (_) {
+    // Older servers may not expose getStats; fall through.
+  }
+  try {
+    final page = await repo.listMemos(pageSize: 200);
+    final counts = <String, int>{};
+    for (final memo in page.memos) {
+      // Content-parsed fallback for servers that omit memo.tags.
+      final tags =
+          memo.tags.isNotEmpty ? memo.tags : extractTags(memo.content).toList();
+      for (final tag in tags) {
+        counts[tag] = (counts[tag] ?? 0) + 1;
+      }
+    }
+    return counts;
+  } catch (_) {
+    return const {};
+  }
+});
+
 /// Tag names pinned to the top of the drawer, persisted locally.
 final pinnedTagsProvider =
     NotifierProvider<PinnedTagsNotifier, List<String>>(PinnedTagsNotifier.new);

@@ -56,3 +56,36 @@ Set<String> extractTags(String content) {
   }
   return tags;
 }
+
+/// A partially typed `#tag` under the caret. [start]/[end] span `#` plus the
+/// typed part in the source text; [query] is what was typed after `#`.
+typedef TagToken = ({int start, int end, String query});
+
+/// Finds the `#tag` token being typed with its end at [offset] (the caret).
+/// A token starts at `#` preceded by start-of-text or whitespace and runs
+/// until whitespace or another `#`. Returns null unless the caret sits at
+/// the token's end, so moving into the middle of an existing tag does not
+/// pop suggestions.
+TagToken? tagTokenAt(String text, int offset) {
+  if (offset <= 0 || offset > text.length) return null;
+  var hash = -1;
+  for (var i = offset - 1; i >= 0; i--) {
+    final ch = text[i];
+    if (ch == '#') {
+      hash = i;
+      break;
+    }
+    if (_isWhitespace(ch)) return null;
+  }
+  if (hash < 0) return null;
+  if (hash > 0 && !_isWhitespace(text[hash - 1])) return null;
+  var end = offset;
+  while (end < text.length && !_isWhitespace(text[end]) && text[end] != '#') {
+    end++;
+  }
+  if (end != offset) return null;
+  return (start: hash, end: end, query: text.substring(hash + 1, offset));
+}
+
+bool _isWhitespace(String ch) =>
+    ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';
