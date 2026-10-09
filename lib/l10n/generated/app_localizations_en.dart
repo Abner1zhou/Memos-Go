@@ -299,5 +299,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walkAgain => 'Walk again';
 
   @override
-  String get noReviewYet => 'No memories for today yet — keep writing';
+  String get noReviewYet => 'Nothing to review yet — keep writing';
+
+  @override
+  String get reviewShuffle => 'Shuffle';
+
+  @override
+  String get wroteToday => 'Today you wrote';
+
+  @override
+  String wroteDaysAgo(int days) {
+    return '$days days ago you wrote';
+  }
+
+  @override
+  String wroteMonthsAgo(int months) {
+    return '$months months ago you wrote';
+  }
+
+  @override
+  String wroteYearsAgo(int years) {
+    return '$years years ago you wrote';
+  }
 }

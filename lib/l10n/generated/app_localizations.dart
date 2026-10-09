@@ -659,8 +659,38 @@ abstract class AppLocalizations {
   /// No description provided for @noReviewYet.
   ///
   /// In zh, this message translates to:
-  /// **'今天还没有往年的回忆，继续记录吧'**
+  /// **'还没有可以回顾的笔记，继续记录吧'**
   String get noReviewYet;
+
+  /// No description provided for @reviewShuffle.
+  ///
+  /// In zh, this message translates to:
+  /// **'换一批'**
+  String get reviewShuffle;
+
+  /// No description provided for @wroteToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天你写下了'**
+  String get wroteToday;
+
+  /// No description provided for @wroteDaysAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{days} 天前你写下了'**
+  String wroteDaysAgo(int days);
+
+  /// No description provided for @wroteMonthsAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{months} 个月前你写下了'**
+  String wroteMonthsAgo(int months);
+
+  /// No description provided for @wroteYearsAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{years} 年前你写下了'**
+  String wroteYearsAgo(int years);
 }
 
 class _AppLocalizationsDelegate

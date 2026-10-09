@@ -295,5 +295,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get walkAgain => '再逛逛';
 
   @override
-  String get noReviewYet => '今天还没有往年的回忆，继续记录吧';
+  String get noReviewYet => '还没有可以回顾的笔记，继续记录吧';
+
+  @override
+  String get reviewShuffle => '换一批';
+
+  @override
+  String get wroteToday => '今天你写下了';
+
+  @override
+  String wroteDaysAgo(int days) {
+    return '$days 天前你写下了';
+  }
+
+  @override
+  String wroteMonthsAgo(int months) {
+    return '$months 个月前你写下了';
+  }
+
+  @override
+  String wroteYearsAgo(int years) {
+    return '$years 年前你写下了';
+  }
 }

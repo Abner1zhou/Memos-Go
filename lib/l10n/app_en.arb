@@ -97,5 +97,13 @@
   "yearsAgoToday": "{years} years ago today",
   "@yearsAgoToday": {"placeholders": {"years": {"type": "int"}}},
   "walkAgain": "Walk again",
-  "noReviewYet": "No memories for today yet — keep writing"
+  "noReviewYet": "Nothing to review yet — keep writing",
+  "reviewShuffle": "Shuffle",
+  "wroteToday": "Today you wrote",
+  "wroteDaysAgo": "{days} days ago you wrote",
+  "@wroteDaysAgo": {"placeholders": {"days": {"type": "int"}}},
+  "wroteMonthsAgo": "{months} months ago you wrote",
+  "@wroteMonthsAgo": {"placeholders": {"months": {"type": "int"}}},
+  "wroteYearsAgo": "{years} years ago you wrote",
+  "@wroteYearsAgo": {"placeholders": {"years": {"type": "int"}}}
 }

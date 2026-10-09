@@ -97,5 +97,13 @@
   "yearsAgoToday": "{years} 年前的今天",
   "@yearsAgoToday": {"placeholders": {"years": {"type": "int"}}},
   "walkAgain": "再逛逛",
-  "noReviewYet": "今天还没有往年的回忆，继续记录吧"
+  "noReviewYet": "还没有可以回顾的笔记，继续记录吧",
+  "reviewShuffle": "换一批",
+  "wroteToday": "今天你写下了",
+  "wroteDaysAgo": "{days} 天前你写下了",
+  "@wroteDaysAgo": {"placeholders": {"days": {"type": "int"}}},
+  "wroteMonthsAgo": "{months} 个月前你写下了",
+  "@wroteMonthsAgo": {"placeholders": {"months": {"type": "int"}}},
+  "wroteYearsAgo": "{years} 年前你写下了",
+  "@wroteYearsAgo": {"placeholders": {"years": {"type": "int"}}}
 }

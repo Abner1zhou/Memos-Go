@@ -8,7 +8,7 @@ import '../../providers/auth_providers.dart';
 import '../../providers/memo_providers.dart';
 import '../memos/memos_page.dart';
 
-/// Random walk: shows one random memo and lets the user keep strolling.
+/// Random walk: shows a random sample of memos and lets the user re-roll.
 class RandomWalkPage extends ConsumerStatefulWidget {
   const RandomWalkPage({super.key});
 
@@ -17,7 +17,17 @@ class RandomWalkPage extends ConsumerStatefulWidget {
 }
 
 class _RandomWalkPageState extends ConsumerState<RandomWalkPage> {
-  int? _index;
+  static const _sampleSize = 10;
+
+  /// Incremented per re-roll; seeds the sampler so a given roll renders a
+  /// stable batch across rebuilds while pool changes still apply.
+  int _roll = 0;
+
+  List<Memo> _sample(List<Memo> pool) {
+    final rng = Random(_roll);
+    final copy = [...pool]..shuffle(rng);
+    return copy.take(_sampleSize).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +39,7 @@ class _RandomWalkPageState extends ConsumerState<RandomWalkPage> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.randomWalk)),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => setState(_roll),
+        onPressed: () => setState(() => _roll++),
         icon: const Icon(Icons.shuffle_rounded),
         label: Text(l10n.walkAgain),
       ),
@@ -63,29 +73,19 @@ class _RandomWalkPageState extends ConsumerState<RandomWalkPage> {
               ),
             );
           }
-          _index ??= Random().nextInt(pool.length);
-          final memo = pool[_index!.clamp(0, pool.length - 1)];
-          return ListView(
+          final picks = _sample(pool);
+          return ListView.builder(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
-            children: [
-              if (repo != null) MemoCard(memo: memo, repo: repo),
-            ],
+            itemCount: picks.length,
+            itemBuilder: (context, index) => Padding(
+              key: ValueKey('random-$_roll-${picks[index].name}'),
+              padding: const EdgeInsets.only(bottom: 8),
+              child:
+                  repo == null ? null : MemoCard(memo: picks[index], repo: repo),
+            ),
           );
         },
       ),
     );
-  }
-
-  void _roll() {
-    final pool = ref
-            .read(memoInsightsProvider)
-            .valueOrNull
-            ?.memos
-            .where((m) =>
-                m.state == MemoState.normal && m.content.trim().isNotEmpty)
-            .toList() ??
-        const <Memo>[];
-    if (pool.isEmpty) return;
-    setState(() => _index = Random().nextInt(pool.length));
   }
 }

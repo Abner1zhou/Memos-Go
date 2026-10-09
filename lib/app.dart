@@ -10,7 +10,7 @@ import 'features/memo_detail/memo_detail_page.dart';
 import 'features/memo_editor/memo_editor_page.dart';
 import 'features/memos/memos_page.dart';
 import 'features/memos/tag_memos_page.dart';
-import 'features/review/on_this_day_page.dart';
+import 'features/review/daily_review_page.dart';
 import 'features/review/random_walk_page.dart';
 import 'features/search/search_page.dart';
 import 'features/settings/settings_page.dart';
@@ -98,7 +98,7 @@ List<RouteBase> buildAppRoutes() => [
       GoRoute(
         path: '/review',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const OnThisDayPage(),
+        builder: (context, state) => const DailyReviewPage(),
       ),
       GoRoute(
         path: '/random',

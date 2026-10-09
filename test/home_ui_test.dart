@@ -239,7 +239,50 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('daily review pill opens on-this-day page', (tester) async {
+  testWidgets('random walk samples up to 10 memos and re-rolls',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final memos = List.generate(
+      12,
+      (i) => _FakeMemoRepository._memo('m$i', 'Random note $i #walk',
+          tags: const ['walk'],
+          created: DateTime.now().subtract(Duration(days: i))),
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        authProvider.overrideWith(_StubAuthNotifier.new),
+        memoRepositoryProvider
+            .overrideWith((ref) => _FakeMemoRepository(memos: memos)),
+      ],
+      child: const MemosGoApp(),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.text('Random walk'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(tester.takeException(), isNull);
+    expect(find.textContaining('Random note'), findsWidgets);
+    final listView = tester.widget<ListView>(find.byType(ListView).first);
+    final delegate =
+        listView.childrenDelegate as SliverChildBuilderDelegate;
+    expect(delegate.estimatedChildCount, 10); // capped at 10 of 12
+
+    await tester.tap(find.text('Walk again'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull);
+    expect(
+        (tester.widget<ListView>(find.byType(ListView).first).childrenDelegate
+                as SliverChildBuilderDelegate)
+            .estimatedChildCount,
+        10);
+  });
+
+  testWidgets('daily review resurfaces past memos and on-this-day',
+      (tester) async {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(ProviderScope(
       overrides: [
@@ -256,8 +299,57 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(tester.takeException(), isNull);
+    // On-this-day section still groups memos from previous years.
     expect(find.text('1 years ago today'), findsOneWidget);
     expect(find.text('One year ago today #life'), findsOneWidget);
+    // The rest of the pool is resurfaced with "ago you wrote" labels.
+    await tester.scrollUntilVisible(
+      find.text('Today you wrote'),
+      240,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.textContaining('ago you wrote'), findsWidgets);
+
+    // Re-roll swaps the batch without errors.
+    await tester.tap(find.byIcon(Icons.refresh_rounded));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull);
+    expect(find.text('Daily review'), findsOneWidget);
+  });
+
+  testWidgets('settings language row stays single-line at phone width',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(393, 852);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        authProvider.overrideWith(_StubAuthNotifier.new),
+        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository()),
+      ],
+      child: const MemosGoApp(),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    // The three language segments live in the subtitle, so the title is not
+    // squeezed into a one-character-per-line vertical wrap.
+    expect(tester.getSize(find.text('Language')).height, lessThan(30));
+
+    // Switching to Chinese applies immediately and stays single-line.
+    await tester.tap(find.text('中文'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Language'), findsNothing);
+    expect(tester.getSize(find.text('语言')).height, lessThan(30));
   });
 
   testWidgets('trash lists deleted memos with restore action', (tester) async {
