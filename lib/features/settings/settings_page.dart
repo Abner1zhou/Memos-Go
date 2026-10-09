@@ -102,16 +102,21 @@ class SettingsPage extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.language),
             title: Text(l10n.language),
-            trailing: SegmentedButton<String>(
-              selected: {settings.localeCode},
-              onSelectionChanged: (s) => ref
-                  .read(settingsProvider.notifier)
-                  .setLocaleCode(s.first),
-              segments: [
-                ButtonSegment(value: '', label: Text(l10n.langSystem)),
-                const ButtonSegment(value: 'zh', label: Text('中文')),
-                const ButtonSegment(value: 'en', label: Text('English')),
-              ],
+            // Full-width under the title: as a trailing widget the three
+            // segments squeeze the title into one-character-per-line wrap.
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: SegmentedButton<String>(
+                selected: {settings.localeCode},
+                onSelectionChanged: (s) => ref
+                    .read(settingsProvider.notifier)
+                    .setLocaleCode(s.first),
+                segments: [
+                  ButtonSegment(value: '', label: Text(l10n.langSystem)),
+                  const ButtonSegment(value: 'zh', label: Text('中文')),
+                  const ButtonSegment(value: 'en', label: Text('English')),
+                ],
+              ),
             ),
           ),
           const Divider(),
