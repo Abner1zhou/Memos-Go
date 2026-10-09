@@ -6,8 +6,10 @@ import 'package:go_router/go_router.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/navigation.dart';
 import '../../core/widgets/attachment_image.dart';
+import '../../core/widgets/image_viewer.dart';
 import '../../core/widgets/memo_markdown.dart';
 import '../../data/models/models.dart';
+import '../../data/repositories/memo_repository.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/memo_providers.dart';
 
@@ -134,22 +136,7 @@ class _MemoDetailPageState extends ConsumerState<MemoDetailPage> {
                       ),
                       if (_memo!.attachments.isNotEmpty) ...[
                         const SizedBox(height: 18),
-                        for (final attachment in _memo!.attachments
-                            .where((a) => a.isImage && a.name.isNotEmpty))
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: AspectRatio(
-                                aspectRatio: 4 / 3,
-                                child: AttachmentImage(
-                                  url: repo.attachmentUrl(attachment),
-                                  headers: repo.authHeaders,
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                            ),
-                          ),
+                        ..._imageAttachments(context, repo),
                       ],
                       if (_memo!.tags.isNotEmpty) ...[
                         const SizedBox(height: 12),
@@ -169,6 +156,38 @@ class _MemoDetailPageState extends ConsumerState<MemoDetailPage> {
                   ),
                 ),
     );
+  }
+
+  /// Full-size image attachments, tappable to open the zoomable viewer.
+  List<Widget> _imageAttachments(BuildContext context, MemoRepository repo) {
+    final images = _memo!.attachments
+        .where((a) => a.isImage && a.name.isNotEmpty)
+        .toList();
+    return [
+      for (final (index, attachment) in images.indexed)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: GestureDetector(
+            onTap: () => showAttachmentViewer(
+              context,
+              images: images,
+              repo: repo,
+              initialIndex: index,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: AspectRatio(
+                aspectRatio: 4 / 3,
+                child: AttachmentImage(
+                  url: repo.attachmentUrl(attachment),
+                  headers: repo.authHeaders,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
+        ),
+    ];
   }
 
   Future<void> _onAction(String action) async {

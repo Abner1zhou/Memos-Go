@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:memos_go/app.dart';
+import 'package:memos_go/core/widgets/attachment_image.dart';
+import 'package:memos_go/core/widgets/image_viewer.dart';
 import 'package:memos_go/data/models/models.dart';
 import 'package:memos_go/data/repositories/auth_repository.dart';
 import 'package:memos_go/data/repositories/memo_repository.dart';
@@ -479,5 +481,51 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('single image memo'), findsOneWidget);
     expect(find.text('multi image memo'), findsOneWidget);
+  });
+
+  testWidgets('tapping a memo image opens the fullscreen viewer',
+      (tester) async {
+    const pic = Attachment(name: 'attachments/pic', filename: 'pic.png', type: 'image/png');
+    final memos = [
+      Memo(
+        name: 'memos/one-img',
+        content: 'single image memo',
+        attachments: const [pic],
+        createTime: DateTime.now(),
+      ),
+    ];
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        authProvider.overrideWith(_StubAuthNotifier.new),
+        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository(memos: memos)),
+      ],
+      child: const MemosGoApp(),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    final image = find.byType(AttachmentImage).first;
+    await tester.ensureVisible(image);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(image, warnIfMissed: false);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(AttachmentViewerPage), findsOneWidget);
+    expect(find.byIcon(Icons.close), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    // Fixed pumps instead of pumpAndSettle: the viewer's loading spinner
+    // animates indefinitely. The pop exit animation needs over a second.
+    await tester.pump();
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    expect(find.byType(AttachmentViewerPage), findsNothing);
+    expect(find.text('single image memo'), findsOneWidget);
   });
 }

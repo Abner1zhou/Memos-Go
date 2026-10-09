@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/attachment_image.dart';
+import '../../core/widgets/image_viewer.dart';
 import '../../core/widgets/memo_markdown.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/navigation.dart';
@@ -334,7 +335,16 @@ class MemoCard extends ConsumerWidget {
               ],
               if (memo.attachments.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                MemoAttachmentsGallery(memo: memo, repo: repo),
+                MemoAttachmentsGallery(
+                  memo: memo,
+                  repo: repo,
+                  onTap: (images, index) => showAttachmentViewer(
+                    context,
+                    images: images,
+                    repo: repo,
+                    initialIndex: index,
+                  ),
+                ),
               ],
               const SizedBox(height: 2),
             ],

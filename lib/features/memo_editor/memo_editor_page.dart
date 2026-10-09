@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/utils/formatters.dart';
+import '../../core/widgets/image_viewer.dart';
 import '../../data/api/memos_api_client.dart';
 import '../../data/models/models.dart';
 import '../../data/repositories/memo_repository.dart';
@@ -325,25 +326,32 @@ class _AttachmentThumb extends StatelessWidget {
     final theme = Theme.of(context);
     return Stack(
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: SizedBox(
-            width: 80,
-            height: 80,
-            child: attachment.isImage
-                ? Image.network(
-                    repo.attachmentUrl(attachment, thumbnail: true),
-                    headers: repo.authHeaders,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => ColoredBox(
+        GestureDetector(
+          onTap: () => showAttachmentViewer(
+            context,
+            images: [attachment],
+            repo: repo,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 80,
+              height: 80,
+              child: attachment.isImage
+                  ? Image.network(
+                      repo.attachmentUrl(attachment, thumbnail: true),
+                      headers: repo.authHeaders,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => ColoredBox(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        child: const Icon(Icons.description_outlined),
+                      ),
+                    )
+                  : ColoredBox(
                       color: theme.colorScheme.surfaceContainerHighest,
                       child: const Icon(Icons.description_outlined),
                     ),
-                  )
-                : ColoredBox(
-                    color: theme.colorScheme.surfaceContainerHighest,
-                    child: const Icon(Icons.description_outlined),
-                  ),
+            ),
           ),
         ),
         Positioned(
