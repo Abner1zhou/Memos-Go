@@ -12,7 +12,7 @@ flutter test test/tag_route_test.dart   # 跑单个测试文件
 flutter run              # iOS 模拟器或 Android 设备
 ```
 
-集成测试（`flutter test integration_test/app_flow_test.dart`）需要真实服务器：本地 docker 跑 Memos（端口 5230）+ 种子管理员账号 `abner` / `test12345`（README 有完整命令）。
+集成测试（`flutter test integration_test/app_flow_test.dart`）连接**固定测试服务器 `http://10.0.117.23:5230/`**（地址硬编码在测试文件里，不要改成宿主机当前 IP），种子管理员账号 `abner` / `test12345`（README 有完整 docker 命令）。
 
 构建：`flutter build ios --release` / `flutter build apk --release`。Android applicationId 与 iOS Bundle ID 均为 `com.abner.memosgo`。
 
