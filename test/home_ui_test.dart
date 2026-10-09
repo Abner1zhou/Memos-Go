@@ -445,4 +445,39 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Trash is empty'), findsOneWidget);
   });
+
+  testWidgets('memo cards with image attachments lay out without exceptions',
+      (tester) async {
+    // Regression: a single full-width image inside the horizontal gallery
+    // ListView used double.infinity width under unbounded constraints.
+    const pic = Attachment(name: 'attachments/pic', filename: 'pic.png', type: 'image/png');
+    final memos = [
+      Memo(
+        name: 'memos/one-img',
+        content: 'single image memo',
+        attachments: const [pic],
+        createTime: DateTime.now(),
+      ),
+      Memo(
+        name: 'memos/two-img',
+        content: 'multi image memo',
+        attachments: const [pic, pic],
+        createTime: DateTime.now().subtract(const Duration(hours: 1)),
+      ),
+    ];
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        authProvider.overrideWith(_StubAuthNotifier.new),
+        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository(memos: memos)),
+      ],
+      child: const MemosGoApp(),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('single image memo'), findsOneWidget);
+    expect(find.text('multi image memo'), findsOneWidget);
+  });
 }

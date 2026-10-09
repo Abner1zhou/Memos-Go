@@ -50,6 +50,28 @@ void main() {
     });
   });
 
+  group('Attachment', () {
+    test('parses size encoded as protojson int64 string', () {
+      // grpc-gateway serializes int64 fields as strings; the upload response
+      // from a real server is e.g. {"size":"70"}.
+      final attachment = Attachment.fromJson({
+        'name': 'attachments/n8M6wTfchZ7SpAjdbDyeHu',
+        'filename': 'test.png',
+        'type': 'image/png',
+        'size': '70',
+      });
+      expect(attachment.size, 70);
+      expect(attachment.uid, 'n8M6wTfchZ7SpAjdbDyeHu');
+      expect(attachment.isImage, isTrue);
+    });
+
+    test('parses size as JSON number and tolerates junk', () {
+      expect(Attachment.fromJson({'name': 'a/b', 'size': 42}).size, 42);
+      expect(Attachment.fromJson({'name': 'a/b', 'size': 'n/a'}).size, 0);
+      expect(Attachment.fromJson({'name': 'a/b'}).size, 0);
+    });
+  });
+
   group('normalizeBaseUrl', () {
     test('adds scheme and strips suffixes', () {
       expect(normalizeBaseUrl('memos.example.com'),

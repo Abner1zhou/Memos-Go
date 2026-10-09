@@ -36,6 +36,8 @@ dependencies:
   # Media
   image_picker: ^1.1.2
   cached_network_image: ^3.4.1
+  # Imported for ImageRenderMethodForWeb (not re-exported by cached_network_image).
+  cached_network_image_platform_interface: ^4.1.1
 
   # Misc
   package_info_plus: ^8.1.2

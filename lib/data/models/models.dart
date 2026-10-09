@@ -123,7 +123,7 @@ class Attachment {
         name: json['name'] as String? ?? '',
         filename: json['filename'] as String? ?? '',
         type: json['type'] as String? ?? '',
-        size: (json['size'] as num?)?.toInt() ?? 0,
+        size: parseJsonInt(json['size']) ?? 0,
         externalLink: json['externalLink'] as String? ?? '',
         createTime: tryParseTime(json['createTime'] as String?),
       );
@@ -238,7 +238,8 @@ class UserStats {
     final raw = json['tagCount'];
     if (raw is Map<String, dynamic>) {
       return UserStats(
-        tagCounts: raw.map((k, v) => MapEntry(k, (v as num?)?.toInt() ?? 0)),
+        tagCounts:
+            raw.map((k, v) => MapEntry(k, parseJsonInt(v) ?? 0)),
       );
     }
     return const UserStats();
@@ -263,3 +264,11 @@ DateTime? tryParseTime(String? value) {
   if (value == null || value.isEmpty) return null;
   return DateTime.tryParse(value);
 }
+
+/// Parses an integer that protojson may encode either as a JSON number or,
+/// for 64-bit fields like `Attachment.size`, as a numeric string.
+int? parseJsonInt(Object? value) => switch (value) {
+      num() => value.toInt(),
+      String() => int.tryParse(value),
+      _ => null,
+    };
