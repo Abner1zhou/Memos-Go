@@ -9,3 +9,11 @@ import 'package:go_router/go_router.dart';
 /// (`GoException: no routes for location`).
 void pushTagMemos(BuildContext context, String tag) =>
     context.push('/memos/tag/${Uri.encodeComponent(tag)}');
+
+/// Opens the composer with `#tag` prefilled, e.g. from a tag page's FAB.
+///
+/// The tag rides in a query parameter, so — like [pushTagMemos] — it must be
+/// percent-encoded to survive reserved characters (`/`, `?`, `#`, `%`) in
+/// nested tag paths.
+void pushNewMemoWithTag(BuildContext context, String tag) =>
+    context.push('/memos/new?tag=${Uri.encodeComponent(tag)}');

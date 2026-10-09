@@ -123,6 +123,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get edit => 'Edit';
 
   @override
+  String get memoDetail => 'Details';
+
+  @override
   String get delete => 'Delete';
 
   @override

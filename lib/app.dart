@@ -59,7 +59,8 @@ List<RouteBase> buildAppRoutes() => [
           GoRoute(
             path: 'new',
             parentNavigatorKey: rootNavigatorKey,
-            builder: (context, state) => const MemoEditorPage(),
+            builder: (context, state) =>
+                MemoEditorPage(initialTag: state.uri.queryParameters['tag']),
           ),
           GoRoute(
             path: 'detail/:uid',

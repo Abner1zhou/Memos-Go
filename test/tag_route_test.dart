@@ -42,4 +42,29 @@ void main() {
       expect(match.pathParameters['tag'], tag);
     }
   });
+
+  // The composer route takes its prefilled tag as a query parameter and must
+  // follow the same percent-encoding rules as tag/:tag.
+  test('new memo route matches without a tag', () {
+    final match = matchFor('/memos/new');
+    expect(match.error, isNull);
+    expect(match.last.route.path, 'new');
+    expect(match.uri.queryParameters['tag'], isNull);
+  });
+
+  test('new memo route prefilled tag decodes round-trip', () {
+    for (final tag in ['hello world', 'C++', '100%', 'a/b#c', '读书/笔记']) {
+      final match = matchFor('/memos/new?tag=${Uri.encodeComponent(tag)}');
+      expect(match.error, isNull, reason: tag);
+      expect(match.last.route.path, 'new');
+      expect(match.uri.queryParameters['tag'], tag);
+    }
+  });
+
+  test('unencoded reserved characters corrupt the prefilled tag', () {
+    // `#` starts the fragment, so a raw tag silently truncates instead of
+    // matching the intended value.
+    final match = matchFor('/memos/new?tag=a/b#c');
+    expect(match.uri.queryParameters['tag'], 'a/b');
+  });
 }

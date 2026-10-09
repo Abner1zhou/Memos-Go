@@ -37,6 +37,7 @@
   "pin": "置顶",
   "unpin": "取消置顶",
   "edit": "编辑",
+  "memoDetail": "详情",
   "delete": "删除",
   "deleteMemoConfirm": "确定要删除这条笔记吗？",
   "cancel": "取消",

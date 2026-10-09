@@ -246,12 +246,11 @@ class MemoCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final query = MemosQuery();
 
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => context.push('/memos/detail/${memo.uid}'),
+        onTap: () => context.push('/memos/edit/${memo.uid}'),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 12, 10, 10),
           child: Column(
@@ -285,8 +284,7 @@ class MemoCard extends ConsumerWidget {
                     constraints: const BoxConstraints(minWidth: 160),
                     icon: Icon(Icons.more_horiz,
                         size: 22, color: theme.colorScheme.onSurfaceVariant),
-                    onSelected: (action) =>
-                        _onAction(context, ref, action, query),
+                    onSelected: (action) => _onAction(context, ref, action),
                     itemBuilder: (context) => [
                       PopupMenuItem(
                         value: 'pin',
@@ -301,12 +299,12 @@ class MemoCard extends ConsumerWidget {
                         ),
                       ),
                       PopupMenuItem(
-                        value: 'edit',
+                        value: 'detail',
                         child: Row(
                           children: [
-                            const Icon(Icons.edit_outlined),
+                            const Icon(Icons.article_outlined),
                             const SizedBox(width: 12),
-                            Text(l10n.edit),
+                            Text(l10n.memoDetail),
                           ],
                         ),
                       ),
@@ -346,22 +344,21 @@ class MemoCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _onAction(BuildContext context, WidgetRef ref, String action,
-      MemosQuery query) async {
+  Future<void> _onAction(
+      BuildContext context, WidgetRef ref, String action) async {
     final l10n = AppLocalizations.of(context)!;
-    final notifier = ref.read(memosListProvider(query).notifier);
     switch (action) {
       case 'pin':
         try {
           final updated = await ref
               .read(memoRepositoryProvider)!
               .updateMemo(memo.copyWith(pinned: !memo.pinned));
-          notifier.upsertLocal(updated);
+          ref.read(memoMutationProvider.notifier).upsert(updated);
         } catch (e) {
           if (context.mounted) _snack(context, e.toString());
         }
-      case 'edit':
-        if (context.mounted) context.push('/memos/edit/${memo.uid}');
+      case 'detail':
+        if (context.mounted) context.push('/memos/detail/${memo.uid}');
       case 'delete':
         final confirmed = await showDialog<bool>(
           context: context,
@@ -382,7 +379,7 @@ class MemoCard extends ConsumerWidget {
         if (confirmed == true) {
           try {
             await ref.read(memoRepositoryProvider)!.deleteMemo(memo.uid);
-            notifier.removeLocal(memo.name);
+            ref.read(memoMutationProvider.notifier).remove(memo.name);
             ref.invalidate(memoInsightsProvider);
             if (context.mounted) _snack(context, l10n.deleted);
           } catch (e) {

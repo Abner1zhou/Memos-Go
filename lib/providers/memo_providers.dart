@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/utils/formatters.dart';
 import '../data/api/memos_api_client.dart';
 import '../data/models/models.dart';
 import '../data/repositories/memo_repository.dart';
@@ -63,6 +64,9 @@ class MemosListNotifier
     extends AutoDisposeFamilyNotifier<MemosListState, MemosQuery> {
   @override
   MemosListState build(MemosQuery arg) {
+    ref.listen<MemoMutation?>(memoMutationProvider, (_, next) {
+      if (next != null) _applyMutation(next);
+    });
     Future.microtask(refresh);
     return MemosListState(
       status: MemosListStatus.loading,
@@ -137,6 +141,38 @@ class MemosListNotifier
         memos: state.memos.where((m) => m.name != name).toList());
   }
 
+  void _applyMutation(MemoMutation mutation) {
+    switch (mutation) {
+      case UpsertMemoMutation(:final memo):
+        if (_matchesQuery(memo)) {
+          upsertLocal(memo);
+        } else {
+          removeLocal(memo.name);
+        }
+      case RemoveMemoMutation(:final name):
+        removeLocal(name);
+    }
+  }
+
+  /// Whether a mutated memo still belongs in this list. Trash lists (state
+  /// filter) never take live upserts; tag/search lists match the memo itself,
+  /// falling back to content-parsed tags for servers that omit them.
+  bool _matchesQuery(Memo memo) {
+    if (arg.state != null) return false;
+    final tag = arg.tag;
+    if (tag != null &&
+        !memo.tags.contains(tag) &&
+        !extractTags(memo.content).contains(tag)) {
+      return false;
+    }
+    final search = arg.search;
+    if (search != null &&
+        !memo.content.toLowerCase().contains(search.toLowerCase())) {
+      return false;
+    }
+    return true;
+  }
+
   void _sortLocal() {
     final sorted = [...state.memos]..sort((a, b) {
         if (a.pinned != b.pinned) return a.pinned ? -1 : 1;
@@ -163,6 +199,38 @@ extension on MemosListState {
         tag: tag,
         error: error,
       );
+}
+
+/// A local memo mutation broadcast to every active [memosListProvider]
+/// instance, so tag/search views below an editor or card menu stay in sync
+/// after create/edit/pin/delete instead of showing stale data.
+sealed class MemoMutation {
+  const MemoMutation();
+}
+
+class UpsertMemoMutation extends MemoMutation {
+  const UpsertMemoMutation(this.memo);
+
+  final Memo memo;
+}
+
+class RemoveMemoMutation extends MemoMutation {
+  const RemoveMemoMutation(this.name);
+
+  final String name;
+}
+
+final memoMutationProvider =
+    NotifierProvider<MemoMutationNotifier, MemoMutation?>(
+        MemoMutationNotifier.new);
+
+class MemoMutationNotifier extends Notifier<MemoMutation?> {
+  @override
+  MemoMutation? build() => null;
+
+  void upsert(Memo memo) => state = UpsertMemoMutation(memo);
+
+  void remove(String name) => state = RemoveMemoMutation(name);
 }
 
 String _messageOf(Object e) {

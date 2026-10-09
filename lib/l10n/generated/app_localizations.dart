@@ -320,6 +320,12 @@ abstract class AppLocalizations {
   /// **'编辑'**
   String get edit;
 
+  /// No description provided for @memoDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'详情'**
+  String get memoDetail;
+
   /// No description provided for @delete.
   ///
   /// In zh, this message translates to:

@@ -37,6 +37,7 @@
   "pin": "Pin",
   "unpin": "Unpin",
   "edit": "Edit",
+  "memoDetail": "Details",
   "delete": "Delete",
   "deleteMemoConfirm": "Delete this memo?",
   "cancel": "Cancel",

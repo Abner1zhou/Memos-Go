@@ -101,6 +101,10 @@ class _FakeMemoRepository extends MemoRepository {
   Future<Memo> updateMemo(Memo memo) async => memo;
 
   @override
+  Future<Memo> getMemo(String uid) async =>
+      _normal.firstWhere((m) => m.uid == uid);
+
+  @override
   Future<void> deleteMemo(String uid) async {}
 
   @override
@@ -138,6 +142,64 @@ void main() {
     await tester.pump();
     expect(find.text('Collapse'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tapping a card opens the editor instead of read-only detail',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        authProvider.overrideWith(_StubAuthNotifier.new),
+        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository()),
+      ],
+      child: const MemosGoApp(),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // Tap the card body (not the #work link): the editor opens in edit mode.
+    await tester.tap(find.textContaining('Morning note').first);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Edit memo'), findsOneWidget);
+    expect(find.text('New memo'), findsNothing);
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.controller!.text, 'Morning note #work');
+  });
+
+  testWidgets('tag page FAB opens composer prefilled with the tag',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        authProvider.overrideWith(_StubAuthNotifier.new),
+        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository()),
+      ],
+      child: const MemosGoApp(),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // Drawer -> tag directory -> work.
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('work'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // Tag page shows its own composer FAB on top of the home one.
+    expect(find.text('#work'), findsWidgets);
+    await tester.tap(find.byIcon(Icons.add).last);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('New memo'), findsOneWidget);
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.controller!.text, '#work ');
   });
 
   testWidgets('drawer shows stats, heatmap, menu and tag directory',

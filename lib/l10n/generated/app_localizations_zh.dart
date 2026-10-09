@@ -121,6 +121,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get edit => '编辑';
 
   @override
+  String get memoDetail => '详情';
+
+  @override
   String get delete => '删除';
 
   @override

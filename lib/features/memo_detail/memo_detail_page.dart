@@ -204,9 +204,7 @@ class _MemoDetailPageState extends ConsumerState<MemoDetailPage> {
         if (confirmed == true) {
           try {
             await repo.deleteMemo(memo.uid);
-            ref
-                .read(memosListProvider(const MemosQuery()).notifier)
-                .removeLocal(memo.name);
+            ref.read(memoMutationProvider.notifier).remove(memo.name);
             ref.invalidate(memoInsightsProvider);
             if (mounted) context.pop();
           } catch (e) {

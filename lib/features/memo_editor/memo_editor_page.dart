@@ -12,11 +12,15 @@ import '../../data/repositories/memo_repository.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/memo_providers.dart';
 
-/// Creates a new memo or edits an existing one ([editingUid]).
+/// Creates a new memo (optionally prefilled with `#[initialTag] `) or edits
+/// an existing one ([editingUid]; [initialTag] is ignored then).
 class MemoEditorPage extends ConsumerStatefulWidget {
-  const MemoEditorPage({super.key, this.editingUid});
+  const MemoEditorPage({super.key, this.editingUid, this.initialTag});
 
   final String? editingUid;
+
+  /// Tag to prefill the composer with when creating, e.g. from a tag page.
+  final String? initialTag;
 
   @override
   ConsumerState<MemoEditorPage> createState() => _MemoEditorPageState();
@@ -41,6 +45,13 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
     if (widget.editingUid != null) {
       _loading = true;
       Future.microtask(_loadMemo);
+    } else {
+      final tag = widget.initialTag?.trim();
+      if (tag != null && tag.isNotEmpty) {
+        _controller.text = '#$tag ';
+        _controller.selection =
+            TextSelection.collapsed(offset: _controller.text.length);
+      }
     }
   }
 
@@ -140,9 +151,7 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
           visibility: _visibility,
           attachments: _attachments,
         );
-        ref
-            .read(memosListProvider(const MemosQuery()).notifier)
-            .upsertLocal(created);
+        ref.read(memoMutationProvider.notifier).upsert(created);
       } else {
         final updated = await repo.updateMemo(
           _editing!.copyWith(
@@ -157,8 +166,8 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
           await repo.updateMemoAttachments(updated.uid, _attachments);
         }
         ref
-            .read(memosListProvider(const MemosQuery()).notifier)
-            .upsertLocal(updated.copyWith(attachments: _attachments));
+            .read(memoMutationProvider.notifier)
+            .upsert(updated.copyWith(attachments: _attachments));
       }
       ref.invalidate(memoInsightsProvider);
       if (mounted) context.pop();
