@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Only the debug manifest gets INTERNET automatically; release builds
+         merge from here, so the app's own networking (dio) needs it too. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="MemosGo"
         android:name="${applicationName}"
