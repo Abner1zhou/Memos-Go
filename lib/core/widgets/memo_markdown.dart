@@ -76,7 +76,10 @@ class MemoMarkdown extends StatelessWidget {
       onTapLink: (text, href, title) {
         if (href == null) return;
         if (href.startsWith('#tag:')) {
-          onTagTap?.call(href.substring(5));
+          // The markdown parser percent-encodes link destinations
+          // (CommonMark destination normalization), so a Chinese tag written
+          // as `(#tag:中文)` arrives here as `#tag:%E4%B8%AD%E6%96%87`.
+          onTagTap?.call(Uri.decodeComponent(href.substring(5)));
           return;
         }
         debugPrint('open url: $href');
