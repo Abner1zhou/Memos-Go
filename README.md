@@ -79,6 +79,38 @@ flutter build apk --release      # Android（或 appbundle）
 - Bundle ID / applicationId：`com.abner.memosgo`
 - iOS 需在 Xcode 中配置自己的签名团队
 
+### 自动发布（GitHub Actions）
+
+推送 `v*` tag 即自动构建 release APK 并发布 GitHub Release（`.github/workflows/release.yml`）：
+
+1. 更新 `pubspec.yaml` 的 `version`（如 `1.0.2+3`）并提交
+2. 打 tag 推送：
+
+```bash
+git tag v1.0.2
+git push origin main v1.0.2
+```
+
+CI 会校验 tag 与 `pubspec.yaml` 版本一致，依次跑 `flutter analyze`、`flutter test`，构建完成后把 `MemosGo-v1.0.2.apk` 挂到 Release，changelog 由提交记录自动生成。
+
+正式签名需在仓库配置 Actions Secrets（Settings → Secrets and variables → Actions）：
+
+| Secret | 说明 |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | keystore 文件的 base64 |
+| `ANDROID_KEYSTORE_PASSWORD` | keystore 密码 |
+| `ANDROID_KEY_ALIAS` | key 别名 |
+| `ANDROID_KEY_PASSWORD` | key 密码 |
+
+```bash
+base64 -i release.keystore | gh secret set ANDROID_KEYSTORE_BASE64
+gh secret set ANDROID_KEYSTORE_PASSWORD    # 回车后粘贴值
+gh secret set ANDROID_KEY_ALIAS
+gh secret set ANDROID_KEY_PASSWORD
+```
+
+未配置时 CI 回退 debug 签名并输出 warning，产出的 APK 仅供测试。iOS 暂未纳入 CI（需签名证书或 TestFlight），仍走本地 Xcode 构建。
+
 ## 登录安全说明
 
 - 密码登录时，App 调用 `/api/v1/auth/signin` 拿到短时 JWT 后，立即用它创建**永不过期**的个人访问令牌（`personalAccessTokens`），之后只保存 PAT，不再保存密码。
