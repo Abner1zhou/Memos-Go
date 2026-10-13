@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/utils/formatters.dart';
 import '../../core/utils/navigation.dart';
+import '../../core/widgets/audio_player_tile.dart';
 import '../../core/widgets/attachment_image.dart';
 import '../../core/widgets/image_viewer.dart';
 import '../../core/widgets/memo_markdown.dart';
@@ -138,6 +139,10 @@ class _MemoDetailPageState extends ConsumerState<MemoDetailPage> {
                         const SizedBox(height: 18),
                         ..._imageAttachments(context, repo),
                       ],
+                      if (_memo!.attachments.any((a) => a.isAudio)) ...[
+                        const SizedBox(height: 8),
+                        ..._audioAttachments(context, repo),
+                      ],
                       if (_memo!.tags.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         Wrap(
@@ -185,6 +190,22 @@ class _MemoDetailPageState extends ConsumerState<MemoDetailPage> {
                 ),
               ),
             ),
+          ),
+        ),
+    ];
+  }
+
+  /// Audio attachments with inline playback (streamed with auth headers).
+  List<Widget> _audioAttachments(BuildContext context, MemoRepository repo) {
+    final audios =
+        _memo!.attachments.where((a) => a.isAudio && a.name.isNotEmpty);
+    return [
+      for (final attachment in audios)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: AudioAttachmentTile(
+            url: repo.attachmentUrl(attachment),
+            headers: repo.authHeaders,
           ),
         ),
     ];

@@ -13,6 +13,7 @@ import 'features/memos/tag_memos_page.dart';
 import 'features/review/daily_review_page.dart';
 import 'features/review/random_walk_page.dart';
 import 'features/search/search_page.dart';
+import 'features/settings/asr_settings_page.dart';
 import 'features/settings/settings_page.dart';
 import 'features/trash/trash_page.dart';
 import 'providers/auth_providers.dart';
@@ -90,6 +91,13 @@ List<RouteBase> buildAppRoutes() => [
         path: '/settings',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const SettingsPage(),
+        routes: [
+          GoRoute(
+            path: 'asr',
+            parentNavigatorKey: rootNavigatorKey,
+            builder: (context, state) => const AsrSettingsPage(),
+          ),
+        ],
       ),
       GoRoute(
         path: '/trash',

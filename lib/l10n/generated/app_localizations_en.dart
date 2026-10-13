@@ -324,4 +324,126 @@ class AppLocalizationsEn extends AppLocalizations {
   String wroteYearsAgo(int years) {
     return '$years years ago you wrote';
   }
+
+  @override
+  String get settingsVoiceInput => 'Voice input';
+
+  @override
+  String get asrNotConfigured => 'Not configured';
+
+  @override
+  String get asrSettingsTitle => 'Speech recognition';
+
+  @override
+  String get asrSettingsSubtitle =>
+      'Configure an OpenAI-compatible transcription endpoint to enable voice input in the editor';
+
+  @override
+  String get asrDialect => 'Protocol';
+
+  @override
+  String get asrDialectOpenai => 'OpenAI compatible';
+
+  @override
+  String get asrDialectDashscope => 'DashScope compatible';
+
+  @override
+  String get asrDialectDashscopeNative => 'DashScope native';
+
+  @override
+  String get asrDashscopeBaseUrlHint =>
+      'https://dashscope.aliyuncs.com/compatible-mode/v1';
+
+  @override
+  String get asrDashscopeModelHint => 'qwen3-asr-flash';
+
+  @override
+  String get asrDashscopeNote =>
+      'On Alibaba Cloud Model Studio only the qwen3-asr-flash model series supports this calling style; keep each recording under 5 minutes. A trailing /api/v1 is rewritten to /compatible-mode/v1 automatically.';
+
+  @override
+  String get asrDashscopeNativeBaseUrlHint => 'https://dashscope.aliyuncs.com';
+
+  @override
+  String get asrDashscopeNativeNote =>
+      'DashScope native protocol (multimodal-generation). Enter the bare host — the /api/v1/services/... path is appended automatically; qwen3-asr-flash series only, recordings under 5 minutes.';
+
+  @override
+  String get asrWebCorsNote =>
+      'Running in a browser: CORS prevents web pages from calling speech-to-text endpoints directly. Use voice input on the iOS / Android app instead.';
+
+  @override
+  String get asrBaseUrl => 'Endpoint URL';
+
+  @override
+  String get asrBaseUrlHint => 'https://api.openai.com/v1';
+
+  @override
+  String get asrApiKey => 'API Key';
+
+  @override
+  String get asrModel => 'Model';
+
+  @override
+  String get asrModelHint => 'whisper-1';
+
+  @override
+  String get asrLanguage => 'Language (optional)';
+
+  @override
+  String get asrLanguageHint => 'zh / en, leave empty to auto-detect';
+
+  @override
+  String get asrKeepAudio => 'Keep audio attachment';
+
+  @override
+  String get asrKeepAudioSubtitle =>
+      'Upload the recording as a memo attachment after transcription';
+
+  @override
+  String get asrTest => 'Test connection';
+
+  @override
+  String get asrTestOk => 'Speech-to-text endpoint works';
+
+  @override
+  String get asrInvalidBaseUrl =>
+      'Invalid endpoint URL, must start with http(s)://';
+
+  @override
+  String get asrClear => 'Clear configuration';
+
+  @override
+  String get asrClearConfirm => 'Clear the speech recognition configuration?';
+
+  @override
+  String get asrNotConfiguredTitle => 'Speech recognition not configured';
+
+  @override
+  String get asrNotConfiguredMessage =>
+      'Configure a speech-to-text model to use voice input (Settings → Voice input).';
+
+  @override
+  String get asrGoSettings => 'Open settings';
+
+  @override
+  String get voiceInput => 'Voice input';
+
+  @override
+  String get recording => 'Recording…';
+
+  @override
+  String get finishRecording => 'Done';
+
+  @override
+  String get transcribing => 'Transcribing…';
+
+  @override
+  String get transcribeFailed => 'Transcription failed';
+
+  @override
+  String get micPermissionDenied => 'Microphone permission not granted';
+
+  @override
+  String get playAudio => 'Play audio';
 }

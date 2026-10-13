@@ -41,6 +41,9 @@ dependencies:
 
   # Misc
   package_info_plus: ^8.1.2
+  record: ^7.1.2
+  just_audio: ^0.10.6
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:

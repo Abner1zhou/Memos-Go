@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Used to attach images to your memos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Used to record voice notes and transcribe them into memo content.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

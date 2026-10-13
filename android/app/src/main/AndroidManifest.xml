@@ -2,6 +2,8 @@
     <!-- Only the debug manifest gets INTERNET automatically; release builds
          merge from here, so the app's own networking (dio) needs it too. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Voice input (record audio for ASR transcription). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="MemosGo"
         android:name="${applicationName}"

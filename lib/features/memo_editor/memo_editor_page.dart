@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -5,13 +8,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/audio/voice_recorder.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/widgets/audio_player_tile.dart';
 import '../../core/widgets/image_viewer.dart';
+import '../../data/api/asr_api.dart';
 import '../../data/api/memos_api_client.dart';
 import '../../data/models/models.dart';
+import '../../data/repositories/asr_repository.dart';
 import '../../data/repositories/memo_repository.dart';
+import '../../providers/asr_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/memo_providers.dart';
+import 'voice_input_sheet.dart';
 
 /// Creates a new memo (optionally prefilled with `#[initialTag] `) or edits
 /// an existing one ([editingUid]; [initialTag] is ignored then).
@@ -38,6 +47,7 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
   var _loading = false;
   var _saving = false;
   var _uploadingCount = 0;
+  var _transcribing = false;
   String? _error;
 
   @override
@@ -166,6 +176,100 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
     return 'image/jpeg';
   }
 
+  /// Voice input: record -> transcribe via the configured ASR model, insert
+  /// the text at the caret and (optionally) keep the audio as an attachment.
+  Future<void> _startVoiceInput() async {
+    final l10n = AppLocalizations.of(context)!;
+    final asr = ref.read(asrProvider);
+    if (!asr.isConfigured) {
+      await _showAsrSetupDialog();
+      return;
+    }
+    final recorder = VoiceRecorder();
+    String? path;
+    try {
+      if (!await recorder.hasPermission()) {
+        _snack(l10n.micPermissionDenied);
+        return;
+      }
+      if (!mounted) return;
+      path = await showVoiceRecordingSheet(context, recorder);
+    } finally {
+      recorder.dispose();
+    }
+    if (path == null || !mounted) return;
+    await _handleRecording(path, asr);
+  }
+
+  Future<void> _showAsrSetupDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    final goSettings = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.asrNotConfiguredTitle),
+        content: Text(l10n.asrNotConfiguredMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(l10n.asrGoSettings),
+          ),
+        ],
+      ),
+    );
+    if (goSettings == true && mounted) context.push('/settings/asr');
+  }
+
+  Future<void> _handleRecording(String path, AsrSettings asr) async {
+    final l10n = AppLocalizations.of(context)!;
+    final bytes = await File(path).readAsBytes();
+    setState(() => _transcribing = true);
+    try {
+      // Keeping the audio and transcribing it are independent: one failing
+      // must not lose the other's result.
+      if (asr.keepAudio) {
+        try {
+          final repo = ref.read(memoRepositoryProvider)!;
+          final attachment = await repo.uploadAttachment(
+            filename: 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a',
+            mimeType: 'audio/mp4',
+            bytes: bytes,
+          );
+          if (mounted) setState(() => _attachments.add(attachment));
+        } catch (e) {
+          if (mounted) _snack('${l10n.uploadFailed}: ${_messageOf(e)}');
+        }
+      }
+      try {
+        final text = await ref.read(asrRepositoryProvider).transcribe(
+              asr,
+              bytes: bytes,
+              filename: 'voice.m4a',
+            );
+        if (text.trim().isNotEmpty) _insertMarkdown(text.trim());
+      } on AsrApiException catch (e) {
+        if (mounted) _snack('${l10n.transcribeFailed}: ${e.message}');
+      } catch (e) {
+        if (mounted) _snack('${l10n.transcribeFailed}: $e');
+      }
+    } finally {
+      // The audio lives on the server now (when kept); drop the local temp.
+      unawaited(_deleteQuietly(File(path)));
+      if (mounted) setState(() => _transcribing = false);
+    }
+  }
+
+  static Future<void> _deleteQuietly(File file) async {
+    try {
+      await file.delete();
+    } catch (_) {
+      // Best-effort temp cleanup.
+    }
+  }
+
   void _insertMarkdown(String before, [String after = '']) {
     final selection = _controller.selection;
     final text = _controller.text;
@@ -245,6 +349,17 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
       appBar: AppBar(
         title: Text(_editing == null ? l10n.newMemo : l10n.editMemo),
         actions: [
+          IconButton(
+            tooltip: l10n.voiceInput,
+            onPressed:
+                (_transcribing || _uploadingCount > 0) ? null : _startVoiceInput,
+            icon: _transcribing
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.mic_none_rounded),
+          ),
           IconButton(
             tooltip: l10n.addImage,
             onPressed: _uploadingCount > 0 ? null : _pickImage,
@@ -420,10 +535,16 @@ class _AttachmentThumb extends StatelessWidget {
                         child: const Icon(Icons.description_outlined),
                       ),
                     )
-                  : ColoredBox(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      child: const Icon(Icons.description_outlined),
-                    ),
+                  : attachment.isAudio
+                      ? AudioAttachmentTile(
+                          url: repo.attachmentUrl(attachment),
+                          headers: repo.authHeaders,
+                          compact: true,
+                        )
+                      : ColoredBox(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          child: const Icon(Icons.description_outlined),
+                        ),
             ),
           ),
         ),

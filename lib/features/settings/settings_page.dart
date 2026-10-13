@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../providers/asr_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/settings_providers.dart';
 
@@ -16,6 +17,7 @@ class SettingsPage extends ConsumerWidget {
     final theme = Theme.of(context);
     final auth = ref.watch(authProvider);
     final settings = ref.watch(settingsProvider);
+    final asr = ref.watch(asrProvider);
     final account = auth.activeAccount;
 
     return Scaffold(
@@ -120,6 +122,14 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           const Divider(),
+          ListTile(
+            leading: const Icon(Icons.mic_none_rounded),
+            title: Text(l10n.settingsVoiceInput),
+            subtitle: Text(
+                asr.isConfigured ? asr.model : l10n.asrNotConfigured),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/asr'),
+          ),
           ListTile(
             leading: const Icon(Icons.add_link),
             title: Text(l10n.addServer),

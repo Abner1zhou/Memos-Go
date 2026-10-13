@@ -697,6 +697,234 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{years} 年前你写下了'**
   String wroteYearsAgo(int years);
+
+  /// No description provided for @settingsVoiceInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'语音输入'**
+  String get settingsVoiceInput;
+
+  /// No description provided for @asrNotConfigured.
+  ///
+  /// In zh, this message translates to:
+  /// **'未配置'**
+  String get asrNotConfigured;
+
+  /// No description provided for @asrSettingsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'语音识别'**
+  String get asrSettingsTitle;
+
+  /// No description provided for @asrSettingsSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'配置 OpenAI 兼容的语音转文字接口，即可在编辑器使用语音输入'**
+  String get asrSettingsSubtitle;
+
+  /// No description provided for @asrDialect.
+  ///
+  /// In zh, this message translates to:
+  /// **'接口协议'**
+  String get asrDialect;
+
+  /// No description provided for @asrDialectOpenai.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenAI 兼容'**
+  String get asrDialectOpenai;
+
+  /// No description provided for @asrDialectDashscope.
+  ///
+  /// In zh, this message translates to:
+  /// **'DashScope 兼容'**
+  String get asrDialectDashscope;
+
+  /// No description provided for @asrDialectDashscopeNative.
+  ///
+  /// In zh, this message translates to:
+  /// **'DashScope 原生'**
+  String get asrDialectDashscopeNative;
+
+  /// No description provided for @asrDashscopeBaseUrlHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'https://dashscope.aliyuncs.com/compatible-mode/v1'**
+  String get asrDashscopeBaseUrlHint;
+
+  /// No description provided for @asrDashscopeModelHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'qwen3-asr-flash'**
+  String get asrDashscopeModelHint;
+
+  /// No description provided for @asrDashscopeNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'阿里云百炼仅 qwen3-asr-flash 系列模型支持此调用方式，单条录音需短于 5 分钟。地址结尾的 /api/v1 会自动改为 /compatible-mode/v1。'**
+  String get asrDashscopeNote;
+
+  /// No description provided for @asrDashscopeNativeBaseUrlHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'https://dashscope.aliyuncs.com'**
+  String get asrDashscopeNativeBaseUrlHint;
+
+  /// No description provided for @asrDashscopeNativeNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'DashScope 原生协议（多模态生成接口），接口地址填主域名即可，/api/v1/services/... 路径自动补全；仅 qwen3-asr-flash 系列，录音需短于 5 分钟。'**
+  String get asrDashscopeNativeNote;
+
+  /// No description provided for @asrWebCorsNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前在浏览器中运行：受 CORS 限制，网页无法直连语音识别接口，请在 iOS / Android 客户端上使用语音输入。'**
+  String get asrWebCorsNote;
+
+  /// No description provided for @asrBaseUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'接口地址'**
+  String get asrBaseUrl;
+
+  /// No description provided for @asrBaseUrlHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'https://api.openai.com/v1'**
+  String get asrBaseUrlHint;
+
+  /// No description provided for @asrApiKey.
+  ///
+  /// In zh, this message translates to:
+  /// **'API Key'**
+  String get asrApiKey;
+
+  /// No description provided for @asrModel.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型'**
+  String get asrModel;
+
+  /// No description provided for @asrModelHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'whisper-1'**
+  String get asrModelHint;
+
+  /// No description provided for @asrLanguage.
+  ///
+  /// In zh, this message translates to:
+  /// **'语言（可选）'**
+  String get asrLanguage;
+
+  /// No description provided for @asrLanguageHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'zh / en，留空自动检测'**
+  String get asrLanguageHint;
+
+  /// No description provided for @asrKeepAudio.
+  ///
+  /// In zh, this message translates to:
+  /// **'保留录音附件'**
+  String get asrKeepAudio;
+
+  /// No description provided for @asrKeepAudioSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'转写后将录音作为附件上传到笔记'**
+  String get asrKeepAudioSubtitle;
+
+  /// No description provided for @asrTest.
+  ///
+  /// In zh, this message translates to:
+  /// **'测试连接'**
+  String get asrTest;
+
+  /// No description provided for @asrTestOk.
+  ///
+  /// In zh, this message translates to:
+  /// **'语音识别接口连接成功'**
+  String get asrTestOk;
+
+  /// No description provided for @asrInvalidBaseUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'接口地址无效，需以 http(s):// 开头'**
+  String get asrInvalidBaseUrl;
+
+  /// No description provided for @asrClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除配置'**
+  String get asrClear;
+
+  /// No description provided for @asrClearConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除语音识别配置？'**
+  String get asrClearConfirm;
+
+  /// No description provided for @asrNotConfiguredTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'未配置语音识别'**
+  String get asrNotConfiguredTitle;
+
+  /// No description provided for @asrNotConfiguredMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'配置语音识别模型后即可使用语音输入（设置 → 语音输入）。'**
+  String get asrNotConfiguredMessage;
+
+  /// No description provided for @asrGoSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'去设置'**
+  String get asrGoSettings;
+
+  /// No description provided for @voiceInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'语音输入'**
+  String get voiceInput;
+
+  /// No description provided for @recording.
+  ///
+  /// In zh, this message translates to:
+  /// **'录音中…'**
+  String get recording;
+
+  /// No description provided for @finishRecording.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成'**
+  String get finishRecording;
+
+  /// No description provided for @transcribing.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在转写…'**
+  String get transcribing;
+
+  /// No description provided for @transcribeFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'转写失败'**
+  String get transcribeFailed;
+
+  /// No description provided for @micPermissionDenied.
+  ///
+  /// In zh, this message translates to:
+  /// **'未授予麦克风权限'**
+  String get micPermissionDenied;
+
+  /// No description provided for @playAudio.
+  ///
+  /// In zh, this message translates to:
+  /// **'播放音频'**
+  String get playAudio;
 }
 
 class _AppLocalizationsDelegate

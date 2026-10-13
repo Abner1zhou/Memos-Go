@@ -114,10 +114,16 @@ class Attachment {
 
   static final RegExp _imageExtPattern =
       RegExp(r'\.(png|jpe?g|gif|webp|heic|bmp)$');
+  static final RegExp _audioExtPattern =
+      RegExp(r'\.(m4a|mp3|wav|aac|ogg|opus|flac)$');
 
   bool get isImage =>
       type.startsWith('image/') ||
       (type.isEmpty && _imageExtPattern.hasMatch(filename.toLowerCase()));
+
+  bool get isAudio =>
+      type.startsWith('audio/') ||
+      (type.isEmpty && _audioExtPattern.hasMatch(filename.toLowerCase()));
 
   factory Attachment.fromJson(Map<String, dynamic> json) => Attachment(
         name: json['name'] as String? ?? '',

@@ -320,4 +320,122 @@ class AppLocalizationsZh extends AppLocalizations {
   String wroteYearsAgo(int years) {
     return '$years 年前你写下了';
   }
+
+  @override
+  String get settingsVoiceInput => '语音输入';
+
+  @override
+  String get asrNotConfigured => '未配置';
+
+  @override
+  String get asrSettingsTitle => '语音识别';
+
+  @override
+  String get asrSettingsSubtitle => '配置 OpenAI 兼容的语音转文字接口，即可在编辑器使用语音输入';
+
+  @override
+  String get asrDialect => '接口协议';
+
+  @override
+  String get asrDialectOpenai => 'OpenAI 兼容';
+
+  @override
+  String get asrDialectDashscope => 'DashScope 兼容';
+
+  @override
+  String get asrDialectDashscopeNative => 'DashScope 原生';
+
+  @override
+  String get asrDashscopeBaseUrlHint =>
+      'https://dashscope.aliyuncs.com/compatible-mode/v1';
+
+  @override
+  String get asrDashscopeModelHint => 'qwen3-asr-flash';
+
+  @override
+  String get asrDashscopeNote =>
+      '阿里云百炼仅 qwen3-asr-flash 系列模型支持此调用方式，单条录音需短于 5 分钟。地址结尾的 /api/v1 会自动改为 /compatible-mode/v1。';
+
+  @override
+  String get asrDashscopeNativeBaseUrlHint => 'https://dashscope.aliyuncs.com';
+
+  @override
+  String get asrDashscopeNativeNote =>
+      'DashScope 原生协议（多模态生成接口），接口地址填主域名即可，/api/v1/services/... 路径自动补全；仅 qwen3-asr-flash 系列，录音需短于 5 分钟。';
+
+  @override
+  String get asrWebCorsNote =>
+      '当前在浏览器中运行：受 CORS 限制，网页无法直连语音识别接口，请在 iOS / Android 客户端上使用语音输入。';
+
+  @override
+  String get asrBaseUrl => '接口地址';
+
+  @override
+  String get asrBaseUrlHint => 'https://api.openai.com/v1';
+
+  @override
+  String get asrApiKey => 'API Key';
+
+  @override
+  String get asrModel => '模型';
+
+  @override
+  String get asrModelHint => 'whisper-1';
+
+  @override
+  String get asrLanguage => '语言（可选）';
+
+  @override
+  String get asrLanguageHint => 'zh / en，留空自动检测';
+
+  @override
+  String get asrKeepAudio => '保留录音附件';
+
+  @override
+  String get asrKeepAudioSubtitle => '转写后将录音作为附件上传到笔记';
+
+  @override
+  String get asrTest => '测试连接';
+
+  @override
+  String get asrTestOk => '语音识别接口连接成功';
+
+  @override
+  String get asrInvalidBaseUrl => '接口地址无效，需以 http(s):// 开头';
+
+  @override
+  String get asrClear => '清除配置';
+
+  @override
+  String get asrClearConfirm => '清除语音识别配置？';
+
+  @override
+  String get asrNotConfiguredTitle => '未配置语音识别';
+
+  @override
+  String get asrNotConfiguredMessage => '配置语音识别模型后即可使用语音输入（设置 → 语音输入）。';
+
+  @override
+  String get asrGoSettings => '去设置';
+
+  @override
+  String get voiceInput => '语音输入';
+
+  @override
+  String get recording => '录音中…';
+
+  @override
+  String get finishRecording => '完成';
+
+  @override
+  String get transcribing => '正在转写…';
+
+  @override
+  String get transcribeFailed => '转写失败';
+
+  @override
+  String get micPermissionDenied => '未授予麦克风权限';
+
+  @override
+  String get playAudio => '播放音频';
 }
