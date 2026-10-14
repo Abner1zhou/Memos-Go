@@ -2,7 +2,7 @@ name: memos_go
 description: "MemosGo - a Memos mobile client for iOS and Android"
 publish_to: 'none'
 
-version: 1.1.0+4
+version: 1.2.0+5
 
 environment:
   sdk: ^3.13.5
