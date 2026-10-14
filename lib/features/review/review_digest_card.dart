@@ -9,7 +9,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../../providers/llm_providers.dart';
 import 'review_digest.dart';
 
-enum _Phase { unconfigured, idle, loading, ready, error }
+enum _Phase { idle, loading, ready, error }
 
 /// "AI 摘要" card atop the daily review page: summarizes today's memos and
 /// echoes past years' same-day memos via the configured LLM. Results are
@@ -42,26 +42,30 @@ class _ReviewDigestCardState extends ConsumerState<ReviewDigestCard> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() async {
-      final settings = await ref.read(llmRepositoryProvider).load();
-      if (!mounted) return;
-      if (!settings.isConfigured) {
-        setState(() => _phase = _Phase.unconfigured);
-        return;
-      }
-      final cached = await ReviewDigestCache().load(_dayKey(DateTime.now()));
-      if (!mounted) return;
-      if (cached != null && cached.fingerprint == _input.fingerprint()) {
-        setState(() {
-          _phase = _Phase.ready;
-          _content = cached.content;
-        });
-      }
-    });
+    Future.microtask(_checkCache);
   }
 
   static String _dayKey(DateTime now) =>
       '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+  /// Shows today's cached digest when it matches the current inputs. Safe to
+  /// call repeatedly (async hydration, settings changes): it no-ops while a
+  /// generate is in flight or content is already on screen.
+  Future<void> _checkCache() async {
+    if (_phase != _Phase.idle) return;
+    final settings = await ref.read(llmRepositoryProvider).load();
+    if (!mounted) return;
+    if (!settings.isConfigured) return;
+    final cached = await ReviewDigestCache().load(_dayKey(DateTime.now()));
+    if (!mounted) return;
+    if (_phase != _Phase.idle) return; // a generate started meanwhile
+    if (cached != null && cached.fingerprint == _input.fingerprint()) {
+      setState(() {
+        _phase = _Phase.ready;
+        _content = cached.content;
+      });
+    }
+  }
 
   Future<void> _generate() async {
     final l10n = AppLocalizations.of(context)!;
@@ -72,15 +76,12 @@ class _ReviewDigestCardState extends ConsumerState<ReviewDigestCard> {
     final repo = ref.read(llmRepositoryProvider);
     final settings = await repo.load();
     if (!mounted) return;
-    if (!settings.isConfigured) {
-      setState(() => _phase = _Phase.unconfigured);
-      return;
-    }
     final input = _input;
     final now = DateTime.now();
     final language = Localizations.localeOf(context).languageCode;
+    String content;
     try {
-      final content = await repo.chat(
+      content = await repo.chat(
         settings,
         messages: [
           LlmChatMessage(
@@ -91,6 +92,18 @@ class _ReviewDigestCardState extends ConsumerState<ReviewDigestCard> {
                   now: now, language: language)),
         ],
       );
+    } catch (e) {
+      if (!mounted) return;
+      final api = asLlmApiError(e);
+      setState(() {
+        _phase = _Phase.error;
+        _error = '${l10n.digestFailed}: ${api?.message ?? e}';
+      });
+      return;
+    }
+    // The chat call already succeeded (and was billed): a cache-write
+    // failure must not flip the card into an error / re-billing retry.
+    try {
       await ReviewDigestCache().save(
         _dayKey(now),
         ReviewDigestEntry(
@@ -99,87 +112,97 @@ class _ReviewDigestCardState extends ConsumerState<ReviewDigestCard> {
           generatedAt: now,
         ),
       );
-      if (!mounted) return;
-      setState(() {
-        _phase = _Phase.ready;
-        _content = content;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      final api = asLlmApiError(e);
-      setState(() {
-        _phase = _Phase.error;
-        _error = '${l10n.digestFailed}: ${api?.message ?? e}';
-      });
+    } catch (_) {
+      // Keep the billed result on screen even if caching failed.
     }
+    if (!mounted) return;
+    setState(() {
+      _phase = _Phase.ready;
+      _content = content;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    // Derived, not stored: the card reacts to settings saved after mount
+    // (async hydration, or returning from /settings/llm). llmProvider starts
+    // at defaults and hydrates asynchronously, so a brief unconfigured flash
+    // on first build is expected.
+    final configured = ref.watch(llmProvider.select((s) => s.isConfigured));
+    ref.listen<bool>(
+      llmProvider.select((s) => s.isConfigured),
+      (previous, next) {
+        if (previous == false && next && _phase == _Phase.idle) {
+          _checkCache();
+        }
+      },
+    );
     if (widget.today.isEmpty && widget.onThisDay.isEmpty) {
       return const SizedBox.shrink();
     }
 
     final Widget body;
-    switch (_phase) {
-      case _Phase.unconfigured:
-        body = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.digestNotConfigured,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 8),
-            FilledButton.tonal(
-              onPressed: () => context.push('/settings/llm'),
-              child: Text(l10n.digestGoConfig),
-            ),
-          ],
-        );
-      case _Phase.idle:
-        body = FilledButton.tonal(
-          onPressed: _generate,
-          child: Text(l10n.digestGenerate),
-        );
-      case _Phase.loading:
-        body = const Center(
-          child: Padding(
-            padding: EdgeInsets.all(12),
-            child: SizedBox(
-                width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+    if (!configured) {
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.digestNotConfigured,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
-        );
-      case _Phase.ready:
-        body = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            MemoMarkdown(content: _content ?? ''),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: _generate,
-                icon: const Icon(Icons.refresh_rounded, size: 16),
-                label: Text(l10n.digestRegenerate),
+          const SizedBox(height: 8),
+          FilledButton.tonal(
+            onPressed: () => context.push('/settings/llm'),
+            child: Text(l10n.digestGoConfig),
+          ),
+        ],
+      );
+    } else {
+      switch (_phase) {
+        case _Phase.idle:
+          body = FilledButton.tonal(
+            onPressed: _generate,
+            child: Text(l10n.digestGenerate),
+          );
+        case _Phase.loading:
+          body = const Center(
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: SizedBox(
+                  width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+          );
+        case _Phase.ready:
+          body = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              MemoMarkdown(content: _content ?? ''),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _generate,
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  label: Text(l10n.digestRegenerate),
+                ),
               ),
-            ),
-          ],
-        );
-      case _Phase.error:
-        body = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _error ?? '',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.error),
-            ),
-            TextButton(onPressed: _generate, child: Text(l10n.retry)),
-          ],
-        );
+            ],
+          );
+        case _Phase.error:
+          body = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _error ?? '',
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.error),
+              ),
+              TextButton(onPressed: _generate, child: Text(l10n.retry)),
+            ],
+          );
+      }
     }
 
     return Card(

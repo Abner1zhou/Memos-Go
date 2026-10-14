@@ -135,10 +135,14 @@ void main() {
     final created = DateTime(2026, 10, 14, 9);
     final today = [_memo('memos/a', '缓存命中测试', created)];
     final fp = ReviewDigestInput(today: today, onThisDay: const {}).fingerprint();
+    // The card caches per *local* day, so seed today's key from the clock.
+    final now = DateTime.now();
+    final dayKey =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     SharedPreferences.setMockInitialValues({
-      'memos_go.reviewDigest.2026-10-14':
+      'memos_go.reviewDigest.$dayKey':
           '{"content":"## 今日要点\\n- 来自缓存","fingerprint":"$fp",'
-          '"generatedAt":"2026-10-14T21:00:00.000"}',
+          '"generatedAt":"${now.toIso8601String()}"}',
     });
     final repo = FakeLlmRepository('unused');
 
@@ -171,5 +175,52 @@ void main() {
     // visible affordances must be gone.
     expect(find.text('AI 摘要'), findsNothing);
     expect(find.text('生成 AI 摘要'), findsNothing);
+  });
+
+  testWidgets('card reacts to a configuration saved after first build',
+      (tester) async {
+    final repo = FakeLlmRepository('unused');
+    final container = ProviderContainer(overrides: [
+      llmRepositoryProvider.overrideWith((ref) => repo),
+    ]);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: ListView(
+              children: [
+                ReviewDigestCard(
+                  today: [_memo('memos/a', '今天写了点东西', DateTime(2026, 10, 14, 9))],
+                  onThisDay: const {},
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // Unconfigured at mount: the setup affordance shows.
+    expect(find.text('配置 AI 助手'), findsOneWidget);
+
+    // Saving settings through the same container must flip the still-mounted
+    // card to the generate affordance without rebuilding the widget.
+    await container.read(llmProvider.notifier).save(const LlmSettings(
+          baseUrl: 'https://llm.example.com/v1',
+          apiKey: 'sk-x',
+          chatModel: 'deepseek-chat',
+        ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('生成 AI 摘要'), findsOneWidget);
+    expect(find.text('配置 AI 助手'), findsNothing);
   });
 }
