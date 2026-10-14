@@ -144,5 +144,8 @@
   "transcribing": "正在转写…",
   "transcribeFailed": "转写失败",
   "micPermissionDenied": "未授予麦克风权限",
+  "newMemoFabTooltip": "新建笔记，长按语音速记",
+  "voiceMemoSaved": "语音笔记已保存",
+  "voiceMemoEmpty": "未识别到语音内容",
   "playAudio": "播放音频"
 }

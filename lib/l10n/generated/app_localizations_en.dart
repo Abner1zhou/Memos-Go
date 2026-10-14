@@ -445,5 +445,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get micPermissionDenied => 'Microphone permission not granted';
 
   @override
+  String get newMemoFabTooltip => 'New memo; hold to voice-record';
+
+  @override
+  String get voiceMemoSaved => 'Voice memo saved';
+
+  @override
+  String get voiceMemoEmpty => 'No speech recognized';
+
+  @override
   String get playAudio => 'Play audio';
 }

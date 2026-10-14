@@ -437,5 +437,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get micPermissionDenied => '未授予麦克风权限';
 
   @override
+  String get newMemoFabTooltip => '新建笔记，长按语音速记';
+
+  @override
+  String get voiceMemoSaved => '语音笔记已保存';
+
+  @override
+  String get voiceMemoEmpty => '未识别到语音内容';
+
+  @override
   String get playAudio => '播放音频';
 }

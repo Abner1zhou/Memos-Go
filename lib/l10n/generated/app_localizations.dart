@@ -920,6 +920,24 @@ abstract class AppLocalizations {
   /// **'未授予麦克风权限'**
   String get micPermissionDenied;
 
+  /// No description provided for @newMemoFabTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建笔记，长按语音速记'**
+  String get newMemoFabTooltip;
+
+  /// No description provided for @voiceMemoSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'语音笔记已保存'**
+  String get voiceMemoSaved;
+
+  /// No description provided for @voiceMemoEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'未识别到语音内容'**
+  String get voiceMemoEmpty;
+
   /// No description provided for @playAudio.
   ///
   /// In zh, this message translates to:

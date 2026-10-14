@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -14,12 +15,32 @@ import '../../data/repositories/memo_repository.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/memo_providers.dart';
 import '../drawer/app_drawer.dart';
+import 'voice_memo_capture.dart';
 
-class MemosPage extends ConsumerWidget {
+class MemosPage extends ConsumerStatefulWidget {
   const MemosPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MemosPage> createState() => _MemosPageState();
+}
+
+class _MemosPageState extends ConsumerState<MemosPage> {
+  var _voiceBusy = false;
+
+  /// Long-press on the "+" FAB: record → transcribe → memo, no editor.
+  Future<void> _quickVoiceMemo() async {
+    if (_voiceBusy) return;
+    HapticFeedback.mediumImpact();
+    setState(() => _voiceBusy = true);
+    try {
+      await captureVoiceMemo(context, ref);
+    } finally {
+      if (mounted) setState(() => _voiceBusy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final query = MemosQuery();
     final list = ref.watch(memosListProvider(query));
@@ -44,9 +65,25 @@ class MemosPage extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/memos/new'),
-        child: const Icon(Icons.add, size: 30),
+      floatingActionButton: GestureDetector(
+        // Long-press starts quick voice capture; taps fall through to the
+        // FAB's own onPressed. The hint rides on Semantics because a FAB
+        // tooltip registers its own long-press recognizer, which would win
+        // the gesture arena over this one.
+        onLongPress: _voiceBusy ? null : _quickVoiceMemo,
+        child: Semantics(
+          label: l10n.newMemoFabTooltip,
+          child: FloatingActionButton(
+            onPressed: _voiceBusy ? null : () => context.push('/memos/new'),
+            child: _voiceBusy
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2.4),
+                  )
+                : const Icon(Icons.add, size: 30),
+          ),
+        ),
       ),
       body: Column(
         children: [

@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/audio/voice_recorder.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/widgets/asr_setup_dialog.dart';
 import '../../core/widgets/audio_player_tile.dart';
 import '../../core/widgets/image_viewer.dart';
 import '../../data/api/asr_api.dart';
@@ -182,7 +183,7 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
     final l10n = AppLocalizations.of(context)!;
     final asr = ref.read(asrProvider);
     if (!asr.isConfigured) {
-      await _showAsrSetupDialog();
+      await showAsrSetupDialog(context);
       return;
     }
     final recorder = VoiceRecorder();
@@ -199,28 +200,6 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
     }
     if (path == null || !mounted) return;
     await _handleRecording(path, asr);
-  }
-
-  Future<void> _showAsrSetupDialog() async {
-    final l10n = AppLocalizations.of(context)!;
-    final goSettings = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.asrNotConfiguredTitle),
-        content: Text(l10n.asrNotConfiguredMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(l10n.asrGoSettings),
-          ),
-        ],
-      ),
-    );
-    if (goSettings == true && mounted) context.push('/settings/asr');
   }
 
   Future<void> _handleRecording(String path, AsrSettings asr) async {
@@ -271,9 +250,13 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
   }
 
   void _insertMarkdown(String before, [String after = '']) {
-    final selection = _controller.selection;
     final text = _controller.text;
-    if (!selection.isValid) return;
+    // A never-focused field reports an invalid (-1) selection; voice input
+    // into a fresh memo never focuses the field before the transcript
+    // arrives, so append at the end instead of dropping the insert.
+    final selection = _controller.selection.isValid
+        ? _controller.selection
+        : TextSelection.collapsed(offset: text.length);
     final start = selection.start;
     final end = selection.end;
     final selected = text.substring(start, end);

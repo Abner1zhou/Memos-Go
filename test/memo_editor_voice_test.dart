@@ -65,4 +65,34 @@ void main() {
     expect(find.text('去设置'), findsOneWidget);
     expect(find.text('取消'), findsOneWidget);
   });
+
+  // Regression: a never-focused TextField has an invalid (-1) selection.
+  // Voice input inserts the transcript without the field ever being
+  // focused, which used to silently drop the text.
+  testWidgets('insert works before the editor field was ever focused',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository()),
+      ],
+      child: MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const MemoEditorPage(),
+      ),
+    ));
+    await tester.pump();
+
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.controller, isNotNull);
+    expect(field.controller!.selection.isValid, isFalse);
+
+    await tester.tap(find.byIcon(Icons.format_bold_rounded));
+    await tester.pump();
+
+    expect(field.controller!.text, '****');
+    expect(field.controller!.selection.isValid, isTrue);
+  });
 }
