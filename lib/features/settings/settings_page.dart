@@ -6,6 +6,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../providers/asr_providers.dart';
 import '../../providers/auth_providers.dart';
+import '../../providers/llm_providers.dart';
 import '../../providers/settings_providers.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -18,6 +19,7 @@ class SettingsPage extends ConsumerWidget {
     final auth = ref.watch(authProvider);
     final settings = ref.watch(settingsProvider);
     final asr = ref.watch(asrProvider);
+    final llm = ref.watch(llmProvider);
     final account = auth.activeAccount;
 
     return Scaffold(
@@ -129,6 +131,14 @@ class SettingsPage extends ConsumerWidget {
                 asr.isConfigured ? asr.model : l10n.asrNotConfigured),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/asr'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.auto_awesome_outlined),
+            title: Text(l10n.llmSettingsTitle),
+            subtitle:
+                Text(llm.isConfigured ? llm.chatModel : l10n.asrNotConfigured),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/llm'),
           ),
           ListTile(
             leading: const Icon(Icons.add_link),

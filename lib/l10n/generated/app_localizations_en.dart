@@ -427,6 +427,76 @@ class AppLocalizationsEn extends AppLocalizations {
   String get asrGoSettings => 'Open settings';
 
   @override
+  String get llmSettingsTitle => 'AI Assistant';
+
+  @override
+  String get llmSettingsSubtitle =>
+      'Configure an OpenAI-compatible LLM endpoint for AI summaries and more; works with DeepSeek, Qwen, SiliconFlow, OpenRouter, Ollama, ...';
+
+  @override
+  String get llmBaseUrl => 'Endpoint URL';
+
+  @override
+  String get llmBaseUrlHint => 'https://api.deepseek.com/v1';
+
+  @override
+  String get llmApiKey => 'API Key';
+
+  @override
+  String get llmChatModel => 'Chat model';
+
+  @override
+  String get llmChatModelHint => 'deepseek-chat';
+
+  @override
+  String get llmEmbeddingModel => 'Embedding model (optional)';
+
+  @override
+  String get llmEmbeddingModelHint =>
+      'text-embedding-3-small; leave empty to skip vector features';
+
+  @override
+  String get llmTest => 'Test connection';
+
+  @override
+  String get llmTestOk => 'Chat endpoint works';
+
+  @override
+  String get llmEmbeddingsTestOk => 'Embeddings endpoint works';
+
+  @override
+  String get llmTestFailed => 'Endpoint test failed';
+
+  @override
+  String get llmInvalidBaseUrl =>
+      'Invalid endpoint URL, must start with http(s)://';
+
+  @override
+  String get llmClear => 'Clear settings';
+
+  @override
+  String get llmClearConfirm => 'Clear AI assistant settings?';
+
+  @override
+  String get digestTitle => 'AI summary';
+
+  @override
+  String get digestGenerate => 'Generate summary';
+
+  @override
+  String get digestRegenerate => 'Regenerate';
+
+  @override
+  String get digestGoConfig => 'Set up AI assistant';
+
+  @override
+  String get digestNotConfigured =>
+      'Configure an LLM endpoint to generate a daily summary';
+
+  @override
+  String get digestFailed => 'Generation failed';
+
+  @override
   String get voiceInput => 'Voice input';
 
   @override
