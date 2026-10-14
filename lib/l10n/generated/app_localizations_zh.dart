@@ -447,4 +447,32 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get playAudio => '播放音频';
+
+  @override
+  String get offlineBanner => '离线中 · 展示本地缓存';
+
+  @override
+  String pendingSyncCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 条待同步',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncingNow => '同步中…';
+
+  @override
+  String get syncNow => '立即同步';
+
+  @override
+  String get pendingBadgeTooltip => '待同步';
+
+  @override
+  String get savedOffline => '已保存，联网后自动同步';
+
+  @override
+  String get voiceMemoUntitled => '语音速记';
 }

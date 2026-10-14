@@ -21,8 +21,7 @@ class MemosApiException implements Exception {
 /// [baseUrl] must be normalized (scheme + host + port, no trailing slash,
 /// no /api suffix). [token] is sent as `Authorization: Bearer` on every
 /// request when non-empty.
-Dio createMemosDio({required String baseUrl, String? token}) {
-  final dio = Dio(BaseOptions(
+Dio createMemosDio({required String baseUrl, String? token}) {  final dio = Dio(BaseOptions(
     baseUrl: '$baseUrl/api/v1',
     connectTimeout: const Duration(seconds: 15),
     receiveTimeout: const Duration(seconds: 30),
@@ -75,6 +74,22 @@ MemosApiException? asMemosApiError(Object error) {
     if (inner is MemosApiException) return inner;
   }
   return null;
+}
+
+/// Whether [error] means "could not reach the server" (offline, timeout)
+/// as opposed to a real server response like 400/404/500. Only these
+/// failures may fall back to the offline queue.
+bool isNetworkFailure(Object error) {
+  final cause = asMemosApiError(error)?.cause ?? error;
+  return cause is DioException &&
+      switch (cause.type) {
+        DioExceptionType.connectionError ||
+        DioExceptionType.connectionTimeout ||
+        DioExceptionType.sendTimeout ||
+        DioExceptionType.receiveTimeout =>
+          true,
+        _ => false,
+      };
 }
 
 /// Normalizes a user-entered server address:

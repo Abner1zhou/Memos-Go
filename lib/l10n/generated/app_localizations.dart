@@ -943,6 +943,48 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'播放音频'**
   String get playAudio;
+
+  /// No description provided for @offlineBanner.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线中 · 展示本地缓存'**
+  String get offlineBanner;
+
+  /// No description provided for @pendingSyncCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count, plural, other{{count} 条待同步}}'**
+  String pendingSyncCount(int count);
+
+  /// No description provided for @syncingNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步中…'**
+  String get syncingNow;
+
+  /// No description provided for @syncNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'立即同步'**
+  String get syncNow;
+
+  /// No description provided for @pendingBadgeTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'待同步'**
+  String get pendingBadgeTooltip;
+
+  /// No description provided for @savedOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存，联网后自动同步'**
+  String get savedOffline;
+
+  /// No description provided for @voiceMemoUntitled.
+  ///
+  /// In zh, this message translates to:
+  /// **'语音速记'**
+  String get voiceMemoUntitled;
 }
 
 class _AppLocalizationsDelegate

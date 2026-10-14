@@ -1,46 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:memos_go/data/models/models.dart';
-import 'package:memos_go/data/repositories/auth_repository.dart';
-import 'package:memos_go/data/repositories/memo_repository.dart';
 import 'package:memos_go/providers/auth_providers.dart';
 import 'package:memos_go/providers/memo_providers.dart';
 
-/// Emulates the server-side CEL filtering this app generates, so tag/search
-/// instances see the same data they would from the real ListMemos endpoint.
-class _FakeRepo extends MemoRepository {
-  _FakeRepo(this._memos)
-      : super(ServerAccount(
-          id: 'http://x|tester',
-          baseUrl: 'http://x',
-          token: 'tok',
-          user: const User(name: 'users/1', username: 'tester'),
-        ));
-
-  final List<Memo> _memos;
-
-  @override
-  Future<MemoListPage> listMemos({
-    int pageSize = 50,
-    String pageToken = '',
-    String? filter,
-  }) async {
-    await Future<void>.delayed(Duration.zero);
-    final tagMatch = RegExp(r'"((?:[^"\\]|\\.)*)" in tags').firstMatch(filter ?? '');
-    final searchMatch =
-        RegExp(r'content.contains\("((?:[^"\\]|\\.)*)"\)').firstMatch(filter ?? '');
-    final memos = _memos.where((m) {
-      if (tagMatch != null) return m.tags.contains(tagMatch.group(1));
-      if (searchMatch != null) {
-        return m.content
-            .toLowerCase()
-            .contains(searchMatch.group(1)!.toLowerCase());
-      }
-      return true;
-    }).toList();
-    return MemoListPage(memos: memos);
-  }
-}
+import 'helpers/offline_app.dart';
 
 Memo _memo(String uid, String content, {List<String> tags = const []}) => Memo(
       name: 'memos/$uid',
@@ -49,16 +13,22 @@ Memo _memo(String uid, String content, {List<String> tags = const []}) => Memo(
       createTime: DateTime(2026, 1, 1),
     );
 
+Future<ProviderContainer> _container(List<Memo> memos) async {
+  final db = await buildSeededDb(normal: memos);
+  final container = ProviderContainer(overrides: [
+    memoRepositoryProvider.overrideWith((ref) => offlineRepo(db)),
+    ...offlineTestOverrides(db),
+  ]);
+  addTearDown(container.dispose);
+  return container;
+}
+
 void main() {
   test('memo mutations broadcast to every active list instance', () async {
-    final memos = [
+    final container = await _container([
       _memo('a', 'first #work', tags: ['work']),
       _memo('b', 'second #life', tags: ['life']),
-    ];
-    final container = ProviderContainer(overrides: [
-      memoRepositoryProvider.overrideWith((ref) => _FakeRepo(memos)),
     ]);
-    addTearDown(container.dispose);
 
     // Keep subscriptions so the autoDispose family instances stay alive,
     // exactly like a tag page sitting below an open editor.
@@ -98,10 +68,7 @@ void main() {
   });
 
   test('trash lists ignore upsert broadcasts', () async {
-    final container = ProviderContainer(overrides: [
-      memoRepositoryProvider.overrideWith((ref) => _FakeRepo([])),
-    ]);
-    addTearDown(container.dispose);
+    final container = await _container([]);
 
     final trash = container.listen(
         memosListProvider(const MemosQuery(state: 'DELETED')), (_, _) {});

@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/utils/formatters.dart';
 import '../data/api/memos_api_client.dart';
+import '../data/local/memo_dao.dart' show MemoSlice;
 import '../data/models/models.dart';
+import '../data/repositories/cached_memo_repository.dart';
 import '../data/repositories/memo_repository.dart';
 import 'auth_providers.dart';
+import 'sync_providers.dart';
 
 enum MemosListStatus { idle, loading, loadingMore, refreshing, error }
 
@@ -19,6 +24,7 @@ class MemosListState {
     this.status = MemosListStatus.idle,
     this.memos = const [],
     this.nextPageToken = '',
+    this.pendingNames = const {},
     this.filter,
     this.tag,
     this.error,
@@ -27,6 +33,9 @@ class MemosListState {
   final MemosListStatus status;
   final List<Memo> memos;
   final String nextPageToken;
+
+  /// Resource names (`memos/{uid}`) whose local edits await a push.
+  final Set<String> pendingNames;
 
   /// CEL filter derived from a search query.
   final String? filter;
@@ -62,12 +71,21 @@ class MemosQuery {
 
 class MemosListNotifier
     extends AutoDisposeFamilyNotifier<MemosListState, MemosQuery> {
+  static const _pageSize = 50;
+  static const _moreToken = 'local';
+
+  StreamSubscription<MemoSlice>? _sliceSub;
+  int _limit = _pageSize;
+
   @override
   MemosListState build(MemosQuery arg) {
     ref.listen<MemoMutation?>(memoMutationProvider, (_, next) {
       if (next != null) _applyMutation(next);
     });
-    Future.microtask(refresh);
+    Future.microtask(() {
+      _subscribe();
+      refresh();
+    });
     return MemosListState(
       status: MemosListStatus.loading,
       filter: _filterOf(arg),
@@ -80,47 +98,64 @@ class MemosListNotifier
     return f.isEmpty ? null : f;
   }
 
-  MemoRepository? get _repo => ref.read(memoRepositoryProvider);
+  /// Subscribes to the local mirror for this query. The slice covers rows
+  /// `0.._limit`, so paging grows the window and re-emits without gaps.
+  void _subscribe() {
+    final repo = ref.read(memoRepositoryProvider);
+    if (repo is! CachedMemoRepository) return;
+    _sliceSub?.cancel();
+    _sliceSub = repo
+        .watchMemosPage(
+          limit: _limit,
+          query: arg.search,
+          tag: arg.tag,
+          state: arg.state,
+        )
+        .listen((slice) => state = state.copyWith(
+              // Keep the initial loading state until anything is on disk.
+              status: slice.records.isEmpty &&
+                      state.status == MemosListStatus.loading
+                  ? MemosListStatus.loading
+                  : MemosListStatus.idle,
+              memos: slice.records.map((r) => r.memo).toList(),
+              pendingNames: slice.records
+                  .where((r) => r.isPending)
+                  .map((r) => r.memo.name)
+                  .toSet(),
+              nextPageToken: slice.hasMore ? _moreToken : '',
+              error: null,
+            ), onError: (e) {
+      state = state.copyWith(status: MemosListStatus.error, error: _messageOf(e));
+    });
+    ref.onDispose(() => _sliceSub?.cancel());
+  }
 
+  /// Triggers a server sync; the DB stream updates the list as pages land.
   Future<void> refresh() async {
-    final repo = _repo;
-    if (repo == null) return;
-    state = MemosListState(
-      status: MemosListStatus.refreshing,
-      filter: _filterOf(arg),
-      tag: arg.tag,
-    );
-    try {
-      final page = await repo.listMemos(pageToken: '', filter: state.filter);
-      state = state.copyWith(
-        status: MemosListStatus.idle,
-        memos: page.memos,
-        nextPageToken: page.nextPageToken,
-        error: null,
-      );
-    } catch (e) {
-      state = state.copyWith(
-          status: MemosListStatus.error, error: _messageOf(e));
+    state = state.copyWith(status: MemosListStatus.refreshing);
+    final engine = ref.read(syncEngineProvider);
+    if (engine == null) {
+      state = state.copyWith(status: MemosListStatus.idle);
+      return;
+    }
+    // Bound the awaited work so pull-to-refresh spinners don't hang on a
+    // slow full pull; late pages still flow in through the stream.
+    final ok = await engine
+        .sync()
+        .timeout(const Duration(seconds: 30), onTimeout: () => false);
+    if (!state.status.inFlight) return;
+    if (state.memos.isEmpty && !ok) {
+      state =
+          state.copyWith(status: MemosListStatus.error, error: engine.lastError);
+    } else {
+      state = state.copyWith(status: MemosListStatus.idle, error: null);
     }
   }
 
   Future<void> loadMore() async {
-    final repo = _repo;
-    if (repo == null || !state.hasMore || state.status.inFlight) return;
-    state = state.copyWith(status: MemosListStatus.loadingMore);
-    try {
-      final page =
-          await repo.listMemos(pageToken: state.nextPageToken, filter: state.filter);
-      state = state.copyWith(
-        status: MemosListStatus.idle,
-        memos: [...state.memos, ...page.memos],
-        nextPageToken: page.nextPageToken,
-        error: null,
-      );
-    } catch (e) {
-      state = state.copyWith(
-          status: MemosListStatus.idle, error: _messageOf(e));
-    }
+    if (!state.hasMore || state.status.inFlight) return;
+    _limit += _pageSize;
+    _subscribe();
   }
 
   /// Applies optimistic local changes after a mutation.
@@ -189,12 +224,14 @@ extension on MemosListState {
     MemosListStatus? status,
     List<Memo>? memos,
     String? nextPageToken,
+    Set<String>? pendingNames,
     String? error,
   }) =>
       MemosListState(
         status: status ?? this.status,
         memos: memos ?? this.memos,
         nextPageToken: nextPageToken ?? this.nextPageToken,
+        pendingNames: pendingNames ?? this.pendingNames,
         filter: filter,
         tag: tag,
         error: error,
@@ -262,28 +299,43 @@ class MemoInsights {
   final DateTime? oldest;
 
   int get memoCount => memos.length;
+
+  MemoInsights copyWithHasMore(bool value) =>
+      MemoInsights(
+        memos: memos,
+        tagCounts: tagCounts,
+        dayCounts: dayCounts,
+        hasMore: value,
+        oldest: oldest,
+      );
 }
 
-/// Single fetch (up to [windowSize] memos) powering drawer stats, the heatmap,
-/// daily review and random walk. Invalidate after create/delete mutations.
+/// Aggregated account insights for the drawer: recent memos, tag counts and a
+/// per-day activity map backing the stats row and heatmap. Computed from the
+/// local mirror so it works offline and recomputes reactively as the sync
+/// engine writes; plain server repositories (tests) keep the legacy fetch.
 final memoInsightsProvider =
-    FutureProvider.autoDispose<MemoInsights>((ref) async {
+    StreamProvider.autoDispose<MemoInsights>((ref) async* {
   final repo = ref.watch(memoRepositoryProvider);
-  if (repo == null) return const MemoInsights();
-
-  const windowSize = 500;
-  MemoListPage page;
-  try {
-    page = await repo.listMemos(pageSize: windowSize);
-  } catch (_) {
-    // Older servers reject large page sizes; fall back to the default page.
-    page = await repo.listMemos();
+  if (repo is CachedMemoRepository) {
+    await for (final records in repo.watchAllMemos()) {
+      yield _aggregateInsights(records.map((r) => r.memo).toList());
+    }
+    return;
   }
+  if (repo == null) {
+    yield const MemoInsights();
+    return;
+  }
+  yield await _fetchInsights(repo);
+});
 
+/// Folds memos into tag counts, per-day activity and the oldest entry.
+MemoInsights _aggregateInsights(List<Memo> memos) {
   final tagCounts = <String, int>{};
   final dayCounts = <String, int>{};
   DateTime? oldest;
-  for (final memo in page.memos) {
+  for (final memo in memos) {
     for (final tag in memo.tags) {
       tagCounts[tag] = (tagCounts[tag] ?? 0) + 1;
     }
@@ -299,21 +351,58 @@ final memoInsightsProvider =
     }
   }
   return MemoInsights(
-    memos: page.memos,
+    memos: memos,
     tagCounts: tagCounts,
     dayCounts: dayCounts,
-    hasMore: page.nextPageToken.isNotEmpty,
+    // The local mirror holds the full corpus, counts are exact.
+    hasMore: false,
     oldest: oldest,
   );
-});
+}
+
+Future<MemoInsights> _fetchInsights(MemoRepository repo) async {
+  const windowSize = 500;
+  MemoListPage page;
+  try {
+    page = await repo.listMemos(pageSize: windowSize);
+  } catch (_) {
+    // Older servers reject large page sizes; fall back to the default page.
+    page = await repo.listMemos();
+  }
+  return _aggregateInsights(page.memos).copyWithHasMore(
+      page.nextPageToken.isNotEmpty);
+}
 
 /// All tags known for the active account as `tag -> memo count`, powering
-/// tag autocomplete in the editor. Uses the server's getStats endpoint and
-/// falls back to parsing recent memos on servers where it is unavailable.
+/// tag autocomplete in the editor. Served from the local mirror (with the
+/// content-parsed fallback for servers that omit memo.tags); plain server
+/// repositories keep the legacy fetch.
 final userTagsProvider =
-    FutureProvider.autoDispose<Map<String, int>>((ref) async {
+    StreamProvider.autoDispose<Map<String, int>>((ref) async* {
   final repo = ref.watch(memoRepositoryProvider);
-  if (repo == null) return const {};
+  if (repo is CachedMemoRepository) {
+    await for (final records in repo.watchAllMemos()) {
+      final counts = <String, int>{};
+      for (final record in records) {
+        final tags = record.memo.tags.isNotEmpty
+            ? record.memo.tags
+            : extractTags(record.memo.content).toList();
+        for (final tag in tags) {
+          counts[tag] = (counts[tag] ?? 0) + 1;
+        }
+      }
+      yield counts;
+    }
+    return;
+  }
+  if (repo == null) {
+    yield const {};
+    return;
+  }
+  yield await _fetchUserTags(repo);
+});
+
+Future<Map<String, int>> _fetchUserTags(MemoRepository repo) async {
   try {
     final stats = await repo.userStats();
     if (stats.tagCounts.isNotEmpty) return stats.tagCounts;
@@ -335,7 +424,7 @@ final userTagsProvider =
   } catch (_) {
     return const {};
   }
-});
+}
 
 /// Tag names pinned to the top of the drawer, persisted locally.
 final pinnedTagsProvider =

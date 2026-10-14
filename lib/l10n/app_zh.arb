@@ -49,7 +49,13 @@
   "allTags": "全部标签",
   "noTags": "还没有标签，在笔记内容中用 #标签 添加",
   "memosCount": "{count} 条笔记",
-  "@memosCount": {"placeholders": {"count": {"type": "int"}}},
+  "@memosCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "settings": "设置",
   "appearance": "外观",
   "themeMode": "主题模式",
@@ -77,7 +83,13 @@
   "notLoggedIn": "未登录",
   "networkError": "网络错误",
   "tagFilter": "标签：{tag}",
-  "@tagFilter": {"placeholders": {"tag": {"type": "String"}}},
+  "@tagFilter": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      }
+    }
+  },
   "createTokenGuide": "打开网页版 → 设置 → 访问令牌 → 创建令牌，然后粘贴到此处",
   "allMemos": "全部笔记",
   "dailyReview": "每日回顾",
@@ -91,22 +103,45 @@
   "expand": "展开",
   "collapse": "收起",
   "pinnedTags": "置顶标签",
-  "allTags": "全部标签",
   "statNotes": "笔记",
   "statTags": "标签",
   "statDays": "天",
   "yearsAgoToday": "{years} 年前的今天",
-  "@yearsAgoToday": {"placeholders": {"years": {"type": "int"}}},
+  "@yearsAgoToday": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
   "walkAgain": "再逛逛",
   "noReviewYet": "还没有可以回顾的笔记，继续记录吧",
   "reviewShuffle": "换一批",
   "wroteToday": "今天你写下了",
   "wroteDaysAgo": "{days} 天前你写下了",
-  "@wroteDaysAgo": {"placeholders": {"days": {"type": "int"}}},
+  "@wroteDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "wroteMonthsAgo": "{months} 个月前你写下了",
-  "@wroteMonthsAgo": {"placeholders": {"months": {"type": "int"}}},
+  "@wroteMonthsAgo": {
+    "placeholders": {
+      "months": {
+        "type": "int"
+      }
+    }
+  },
   "wroteYearsAgo": "{years} 年前你写下了",
-  "@wroteYearsAgo": {"placeholders": {"years": {"type": "int"}}},
+  "@wroteYearsAgo": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
   "settingsVoiceInput": "语音输入",
   "asrNotConfigured": "未配置",
   "asrSettingsTitle": "语音识别",
@@ -147,5 +182,19 @@
   "newMemoFabTooltip": "新建笔记，长按语音速记",
   "voiceMemoSaved": "语音笔记已保存",
   "voiceMemoEmpty": "未识别到语音内容",
-  "playAudio": "播放音频"
+  "playAudio": "播放音频",
+  "offlineBanner": "离线中 · 展示本地缓存",
+  "pendingSyncCount": "{count, plural, other{{count} 条待同步}}",
+  "@pendingSyncCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncingNow": "同步中…",
+  "syncNow": "立即同步",
+  "pendingBadgeTooltip": "待同步",
+  "savedOffline": "已保存，联网后自动同步",
+  "voiceMemoUntitled": "语音速记"
 }

@@ -59,7 +59,7 @@ void main() {
     Future<void> pumpEditor(WidgetTester tester) async {
       await tester.pumpWidget(ProviderScope(
         overrides: [
-          userTagsProvider.overrideWith((ref) async => knownTags),
+          userTagsProvider.overrideWith((ref) => Stream.value(knownTags)),
         ],
         child: MaterialApp(
           localizationsDelegates: const [

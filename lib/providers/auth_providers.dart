@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/repositories/auth_repository.dart';
+import '../data/repositories/cached_memo_repository.dart';
 import '../data/repositories/memo_repository.dart';
+import 'sync_providers.dart';
 
 final authRepositoryProvider =
     Provider<AuthRepository>((ref) => AuthRepository());
@@ -94,6 +98,8 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> removeAccount(String id) async {
     final repo = ref.read(authRepositoryProvider);
     await repo.removeAccount(id);
+    // Drop the account's local mirror so switching back starts clean.
+    unawaited(ref.read(appDatabaseProvider).memoDao.purgeAccount(id));
     final accounts = await repo.loadAccounts();
     final wasActive = state.activeAccount?.id == id;
     if (accounts.isEmpty) {
@@ -130,10 +136,15 @@ extension on AuthState {
 
 final authProvider = NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
 
-/// Repository for the active account; null when signed out.
+/// Local-first repository for the active account; null when signed out.
+/// Falls back to a plain server repository when no database is attached
+/// (tests may override with fakes).
 final memoRepositoryProvider = Provider<MemoRepository?>((ref) {
   final auth = ref.watch(authProvider);
   final account = auth.activeAccount;
   if (account == null) return null;
-  return MemoRepository(account);
+  return CachedMemoRepository(
+    account: account,
+    db: ref.watch(appDatabaseProvider),
+  );
 });

@@ -455,4 +455,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get playAudio => 'Play audio';
+
+  @override
+  String get offlineBanner => 'Offline · showing local cache';
+
+  @override
+  String pendingSyncCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pending sync',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncingNow => 'Syncing…';
+
+  @override
+  String get syncNow => 'Sync now';
+
+  @override
+  String get pendingBadgeTooltip => 'Pending sync';
+
+  @override
+  String get savedOffline => 'Saved — will sync when online';
+
+  @override
+  String get voiceMemoUntitled => 'Voice memo';
 }

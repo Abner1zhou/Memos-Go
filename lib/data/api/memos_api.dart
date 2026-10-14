@@ -88,13 +88,18 @@ class MemosApi {
     return Memo.fromJson(data.cast<String, dynamic>());
   }
 
+  /// [memoId] lets the caller pick the uid (proto `memo_id`), which makes
+  /// offline replay idempotent; servers that don't support it ignore the
+  /// field and assign their own uid.
   Future<Memo> createMemo({
     required String content,
     required MemoVisibility visibility,
+    String? memoId,
   }) async {
     final data = await _post('/memos', body: {
       'content': content,
       'visibility': visibility.wireName,
+      if (memoId != null && memoId.isNotEmpty) 'memoId': memoId,
     });
     return Memo.fromJson(data.cast<String, dynamic>());
   }

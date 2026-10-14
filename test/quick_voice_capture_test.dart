@@ -6,6 +6,7 @@ import 'package:memos_go/data/models/models.dart';
 import 'package:memos_go/data/repositories/auth_repository.dart';
 import 'package:memos_go/data/repositories/memo_repository.dart';
 import 'package:memos_go/providers/auth_providers.dart';
+import 'package:memos_go/providers/sync_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _StubAuthNotifier extends AuthNotifier {
@@ -53,6 +54,9 @@ void main() {
       overrides: [
         authProvider.overrideWith(_StubAuthNotifier.new),
         memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository()),
+        // The voice capture flow under test doesn't sync; the engine's
+        // debounce timer would otherwise outlive the test.
+        syncEngineProvider.overrideWithValue(null),
       ],
       child: const MemosGoApp(),
     ));

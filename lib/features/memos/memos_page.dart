@@ -14,6 +14,7 @@ import '../../data/models/models.dart';
 import '../../data/repositories/memo_repository.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/memo_providers.dart';
+import '../../providers/sync_providers.dart';
 import '../drawer/app_drawer.dart';
 import 'voice_memo_capture.dart';
 
@@ -88,10 +89,74 @@ class _MemosPageState extends ConsumerState<MemosPage> {
       body: Column(
         children: [
           const _FeaturePills(),
+          const SyncBanner(),
           Expanded(
             child: MemosFeedBody(query: query, list: list, repo: repo),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Thin status strip under the feature pills: offline notice, pending-sync
+/// count with a "sync now" action, or a syncing indicator.
+class SyncBanner extends ConsumerWidget {
+  const SyncBanner({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final status = ref.watch(syncStatusProvider);
+    if (status.online && status.pendingCount == 0) return const SizedBox.shrink();
+
+    final Widget icon;
+    final String text;
+    if (status.syncing) {
+      icon = const SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(strokeWidth: 2));
+      text = l10n.syncingNow;
+    } else if (!status.online) {
+      icon = const Icon(Icons.cloud_off_outlined, size: 15);
+      text = status.pendingCount > 0
+          ? '${l10n.offlineBanner} · ${l10n.pendingSyncCount(status.pendingCount)}'
+          : l10n.offlineBanner;
+    } else {
+      icon = const Icon(Icons.sync_problem_outlined, size: 15);
+      text = l10n.pendingSyncCount(status.pendingCount);
+    }
+
+    return Material(
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: InkWell(
+        onTap: status.online && !status.syncing
+            ? () => ref.read(syncEngineProvider)?.sync()
+            : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              icon,
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  text +
+                      (status.online && !status.syncing
+                          ? ' · ${l10n.syncNow}'
+                          : ''),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -227,7 +292,11 @@ class MemosFeedBody extends ConsumerWidget {
             );
           }
           final memo = list.memos[index];
-          return MemoCard(memo: memo, repo: repo ?? ref.read(memoRepositoryProvider)!);
+          return MemoCard(
+            memo: memo,
+            repo: repo ?? ref.read(memoRepositoryProvider)!,
+            pendingSync: list.pendingNames.contains(memo.name),
+          );
         },
       ),
     );
@@ -275,10 +344,18 @@ class _MessageView extends StatelessWidget {
 }
 
 class MemoCard extends ConsumerWidget {
-  const MemoCard({super.key, required this.memo, required this.repo});
+  const MemoCard({
+    super.key,
+    required this.memo,
+    required this.repo,
+    this.pendingSync = false,
+  });
 
   final Memo memo;
   final MemoRepository repo;
+
+  /// Whether this memo has local edits waiting to be pushed.
+  final bool pendingSync;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -311,6 +388,15 @@ class MemoCard extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  if (pendingSync)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Tooltip(
+                        message: l10n.pendingBadgeTooltip,
+                        child: Icon(Icons.cloud_upload_outlined,
+                            size: 14, color: theme.colorScheme.tertiary),
+                      ),
+                    ),
                   if (memo.visibility != MemoVisibility.private)
                     Padding(
                       padding: const EdgeInsets.only(right: 2),
