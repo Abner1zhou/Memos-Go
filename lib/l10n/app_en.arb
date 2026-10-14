@@ -144,5 +144,8 @@
   "transcribing": "Transcribing…",
   "transcribeFailed": "Transcription failed",
   "micPermissionDenied": "Microphone permission not granted",
+  "newMemoFabTooltip": "New memo; hold to voice-record",
+  "voiceMemoSaved": "Voice memo saved",
+  "voiceMemoEmpty": "No speech recognized",
   "playAudio": "Play audio"
 }
