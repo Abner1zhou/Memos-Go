@@ -132,7 +132,7 @@ class LlmApi {
         data: {
           'model': model,
           'messages': messages.map((m) => m.toJson()).toList(),
-          if (maxTokens != null) 'max_tokens': maxTokens,
+          'max_tokens': ?maxTokens,
         },
       );
       final data = (res.data ?? const {}).cast<String, dynamic>();
