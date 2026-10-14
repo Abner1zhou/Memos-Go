@@ -97,9 +97,11 @@ class Attachment {
     this.size = 0,
     this.externalLink = '',
     this.createTime,
+    this.localPath,
   });
 
-  /// Resource name, e.g. `attachments/abc123`.
+  /// Resource name, e.g. `attachments/abc123` once uploaded, or
+  /// `pending/<id>` for an offline-captured file awaiting upload.
   final String name;
   final String filename;
   final String type;
@@ -109,8 +111,14 @@ class Attachment {
   /// May be null for pending uploads that have no server-side object yet.
   final DateTime? createTime;
 
+  /// Local file backing an offline-captured attachment (not serialized).
+  final String? localPath;
+
   /// Identifier segment of [name] (`attachments/{uid}` -> `{uid}`).
   String get uid => name.split('/').last;
+
+  /// True while the file only exists on this device.
+  bool get isPendingUpload => localPath != null && localPath!.isNotEmpty;
 
   static final RegExp _imageExtPattern =
       RegExp(r'\.(png|jpe?g|gif|webp|heic|bmp)$');

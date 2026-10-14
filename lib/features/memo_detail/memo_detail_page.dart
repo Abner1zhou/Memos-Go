@@ -13,6 +13,7 @@ import '../../data/models/models.dart';
 import '../../data/repositories/memo_repository.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/memo_providers.dart';
+import '../../providers/sync_providers.dart';
 
 /// Read-only memo detail with actions (edit / pin / delete / comment count).
 class MemoDetailPage extends ConsumerStatefulWidget {
@@ -102,6 +103,12 @@ class _MemoDetailPageState extends ConsumerState<MemoDetailPage> {
               : RefreshIndicator(
                   onRefresh: () async {
                     setState(() => _error = null);
+                    final engine = ref.read(syncEngineProvider);
+                    if (engine != null) {
+                      await engine.sync().timeout(
+                          const Duration(seconds: 20),
+                          onTimeout: () => false);
+                    }
                     await _load();
                   },
                   child: ListView(
@@ -186,6 +193,7 @@ class _MemoDetailPageState extends ConsumerState<MemoDetailPage> {
                 child: AttachmentImage(
                   url: repo.attachmentUrl(attachment),
                   headers: repo.authHeaders,
+                  localPath: attachment.localPath,
                   fit: BoxFit.contain,
                 ),
               ),
@@ -206,6 +214,7 @@ class _MemoDetailPageState extends ConsumerState<MemoDetailPage> {
           child: AudioAttachmentTile(
             url: repo.attachmentUrl(attachment),
             headers: repo.authHeaders,
+            localPath: attachment.localPath,
           ),
         ),
     ];

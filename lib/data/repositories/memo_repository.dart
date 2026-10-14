@@ -31,9 +31,21 @@ class MemoRepository {
     required String content,
     required MemoVisibility visibility,
     List<Attachment> attachments = const [],
+    String? memoId,
   }) async {
-    final memo = await _api.createMemo(
-        content: content, visibility: visibility);
+    Memo memo;
+    try {
+      memo = await _api.createMemo(
+          content: content, visibility: visibility, memoId: memoId);
+    } on MemosApiException catch (e) {
+      // Some servers reject the memoId field outright; retry once without
+      // it so the offline replay still lands (uid gets re-keyed upstream).
+      if (memoId == null || e.statusCode == null || e.statusCode! < 400 || e.statusCode! >= 500) {
+        rethrow;
+      }
+      memo = await _api.createMemo(
+          content: content, visibility: visibility);
+    }
     if (attachments.isNotEmpty) {
       await _api.setMemoAttachments(memo.uid, attachments);
       return memo.copyWith(attachments: attachments);

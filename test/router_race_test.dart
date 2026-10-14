@@ -8,6 +8,7 @@ import 'package:memos_go/app.dart';
 import 'package:memos_go/data/models/models.dart';
 import 'package:memos_go/data/repositories/auth_repository.dart';
 import 'package:memos_go/providers/auth_providers.dart';
+import 'package:memos_go/providers/sync_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Completer<ServerAccount> loginGate = Completer<ServerAccount>();
@@ -73,7 +74,15 @@ void main() {
   });
 
   Future<void> pumpApp(WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: MemosGoApp()));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        // The router race under test has nothing to do with syncing; the
+        // engine's connectivity listener and debounce timer would otherwise
+        // outlive the test.
+        syncEngineProvider.overrideWithValue(null),
+      ],
+      child: const MemosGoApp(),
+    ));
     // Initial parse + first frame: redirect (loading) -> /login.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -113,7 +122,12 @@ void main() {
     storage.values['memos_go.accounts'] = '[]';
     final repo = FakeAuthRepository(loginGate: loginGate);
     await tester.pumpWidget(ProviderScope(
-      overrides: [authRepositoryProvider.overrideWithValue(repo)],
+      overrides: [
+        authRepositoryProvider.overrideWithValue(repo),
+        // The router race under test has nothing to do with syncing; the
+        // engine's debounce timer would otherwise outlive the test.
+        syncEngineProvider.overrideWithValue(null),
+      ],
       child: const MemosGoApp(),
     ));
     await tester.pump();

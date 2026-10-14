@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cached_network_image_platform_interface/cached_network_image_platform_interface.dart'
     show ImageRenderMethodForWeb;
@@ -6,21 +8,35 @@ import 'package:flutter/material.dart';
 import '../../data/models/models.dart';
 import '../../data/repositories/memo_repository.dart';
 
-/// Displays an attachment image through the bearer-protected file endpoint.
+/// Displays an attachment image through the bearer-protected file endpoint,
+/// or straight from disk while the file is only available offline.
 class AttachmentImage extends StatelessWidget {
   const AttachmentImage({
     super.key,
     required this.url,
     required this.headers,
+    this.localPath,
     this.fit = BoxFit.cover,
   });
 
   final String url;
   final Map<String, String> headers;
+
+  /// Local file backing a pending (not yet uploaded) attachment.
+  final String? localPath;
+
   final BoxFit fit;
 
   @override
   Widget build(BuildContext context) {
+    final path = localPath;
+    if (path != null && path.isNotEmpty) {
+      return Image.file(
+        File(path),
+        fit: fit,
+        errorBuilder: (_, _, _) => _errorWidget(context),
+      );
+    }
     return CachedNetworkImage(
       imageUrl: url,
       httpHeaders: headers,
@@ -29,7 +45,12 @@ class AttachmentImage extends StatelessWidget {
       // cannot send the Authorization header (server then answers 401).
       // HttpGet fetches through the HTTP path with headers instead.
       imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,
-      placeholder: (_, _) => Container(
+      placeholder: (_, _) => _placeholder(context),
+      errorWidget: (_, _, _) => _errorWidget(context),
+    );
+  }
+
+  Widget _placeholder(BuildContext context) => Container(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         alignment: Alignment.center,
         child: const SizedBox(
@@ -37,17 +58,16 @@ class AttachmentImage extends StatelessWidget {
           height: 22,
           child: CircularProgressIndicator(strokeWidth: 2),
         ),
-      ),
-      errorWidget: (_, _, _) => Container(
+      );
+
+  Widget _errorWidget(BuildContext context) => Container(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         alignment: Alignment.center,
         child: Icon(
           Icons.broken_image_outlined,
           color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
-      ),
-    );
-  }
+      );
 }
 
 /// Horizontal gallery of a memo's image attachments.
@@ -125,6 +145,7 @@ class _GalleryTile extends StatelessWidget {
           child: AttachmentImage(
             url: repo.attachmentUrl(attachment, thumbnail: true),
             headers: repo.authHeaders,
+            localPath: attachment.localPath,
           ),
         ),
       ),

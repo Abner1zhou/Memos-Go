@@ -4,129 +4,72 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:memos_go/app.dart';
 import 'package:memos_go/core/widgets/attachment_image.dart';
 import 'package:memos_go/core/widgets/image_viewer.dart';
+import 'package:memos_go/data/local/app_database.dart';
 import 'package:memos_go/data/models/models.dart';
-import 'package:memos_go/data/repositories/auth_repository.dart';
-import 'package:memos_go/data/repositories/memo_repository.dart';
 import 'package:memos_go/features/drawer/activity_heatmap.dart';
 import 'package:memos_go/providers/auth_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'helpers/offline_app.dart';
+
 class _StubAuthNotifier extends AuthNotifier {
   @override
-  AuthState build() {
-    final account = ServerAccount(
-      id: 'http://x|tester',
-      baseUrl: 'http://x',
-      token: 'tok',
-      user: const User(name: 'users/1', username: 'tester'),
-    );
-    return AuthState(
-      status: AuthStatus.signedIn,
-      accounts: [account],
-      activeAccount: account,
-    );
-  }
+  AuthState build() => AuthState(
+        status: AuthStatus.signedIn,
+        accounts: [testAccount],
+        activeAccount: testAccount,
+      );
 }
 
-class _FakeMemoRepository extends MemoRepository {
-  _FakeMemoRepository({List<Memo>? memos, List<Memo>? deleted})
-      : _normal = memos ?? _defaultMemos,
-        _deleted = deleted ?? _defaultDeleted,
-        super(ServerAccount(
-          id: 'http://x|tester',
-          baseUrl: 'http://x',
-          token: 'tok',
-          user: const User(name: 'users/1', username: 'tester'),
-        ));
+List<Memo> _defaultMemos() => [
+      testMemo('today', 'Morning note #work',
+          created: DateTime.now(), tags: const ['work']),
+      testMemo(
+        'long',
+        List.filled(120, 'lorem').join(' '),
+        created: DateTime.now().subtract(const Duration(days: 1)),
+      ),
+      testMemo('heat', 'heatmap seed #work #life',
+          created: DateTime.now().subtract(const Duration(days: 3)),
+          tags: const ['work', 'life']),
+      testMemo('heat2', 'another seed #life',
+          created: DateTime.now().subtract(const Duration(days: 3)),
+          tags: const ['life']),
+      testMemo(
+        'oldyear',
+        'One year ago today #life',
+        created: DateTime(DateTime.now().year - 1, DateTime.now().month,
+            DateTime.now().day, 9),
+        tags: const ['life'],
+      ),
+    ];
 
-  static Memo _memo(
-    String uid,
-    String content, {
-    DateTime? created,
-    List<String> tags = const [],
-    MemoState state = MemoState.normal,
-  }) =>
-      Memo(
-        name: 'memos/$uid',
-        state: state,
-        content: content,
-        tags: tags,
-        pinned: false,
-        createTime: created ?? DateTime.now(),
-      );
+List<Memo> _defaultDeleted() => [
+      testMemo('gone', 'Deleted memo',
+          state: MemoState.deleted,
+          created: DateTime.now().subtract(const Duration(days: 2))),
+    ];
 
-  static final List<Memo> _defaultMemos = [
-    _memo('today', 'Morning note #work',
-        created: DateTime.now(),
-        tags: const ['work']),
-    _memo(
-      'long',
-      List.filled(120, 'lorem').join(' '),
-      created: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    _memo('heat', 'heatmap seed #work #life',
-        created: DateTime.now().subtract(const Duration(days: 3)),
-        tags: const ['work', 'life']),
-    _memo('heat2', 'another seed #life',
-        created: DateTime.now().subtract(const Duration(days: 3)),
-        tags: const ['life']),
-    _memo(
-      'oldyear',
-      'One year ago today #life',
-      created: DateTime(DateTime.now().year - 1, DateTime.now().month,
-          DateTime.now().day, 9),
-      tags: const ['life'],
-    ),
-  ];
-
-  static final List<Memo> _defaultDeleted = [
-    _memo('gone', 'Deleted memo',
-        state: MemoState.deleted,
-        created: DateTime.now().subtract(const Duration(days: 2))),
-  ];
-
-  final List<Memo> _normal;
-  final List<Memo> _deleted;
-
-  @override
-  Future<MemoListPage> listMemos({
-    int pageSize = 50,
-    String pageToken = '',
-    String? filter,
-  }) async {
-    await Future<void>.delayed(Duration.zero);
-    final deleted = (filter ?? '').contains('DELETED');
-    return MemoListPage(memos: deleted ? _deleted : _normal);
-  }
-
-  @override
-  Future<Memo> updateMemo(Memo memo) async => memo;
-
-  @override
-  Future<Memo> getMemo(String uid) async =>
-      _normal.firstWhere((m) => m.uid == uid);
-
-  @override
-  Future<void> deleteMemo(String uid) async {}
-
-  @override
-  Future<UserStats> userStats() async =>
-      const UserStats(tagCounts: {'work': 2, 'life': 3});
+Future<void> _pumpApp(WidgetTester tester, AppDatabase db) async {
+  await tester.pumpWidget(ProviderScope(
+    overrides: [
+      authProvider.overrideWith(_StubAuthNotifier.new),
+      memoRepositoryProvider.overrideWith((ref) => offlineRepo(db)),
+      ...offlineTestOverrides(db),
+    ],
+    child: const MemosGoApp(),
+  ));
+  await tester.pump();
+  await tester.pump(const Duration(seconds: 1));
 }
 
 void main() {
   testWidgets('home feed renders cards, pills and composer button',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        authProvider.overrideWith(_StubAuthNotifier.new),
-        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository()),
-      ],
-      child: const MemosGoApp(),
-    ));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    final db = await buildSeededDb(
+        normal: _defaultMemos(), deleted: _defaultDeleted());
+    await _pumpApp(tester, db);
 
     expect(tester.takeException(), isNull);
     // App bar: menu + search; feature pills; green composer.
@@ -149,15 +92,9 @@ void main() {
   testWidgets('tapping a card opens the editor instead of read-only detail',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        authProvider.overrideWith(_StubAuthNotifier.new),
-        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository()),
-      ],
-      child: const MemosGoApp(),
-    ));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    final db = await buildSeededDb(
+        normal: _defaultMemos(), deleted: _defaultDeleted());
+    await _pumpApp(tester, db);
 
     // Tap the card body (not the #work link): the editor opens in edit mode.
     await tester.tap(find.textContaining('Morning note').first);
@@ -174,15 +111,9 @@ void main() {
   testWidgets('tag page FAB opens composer prefilled with the tag',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        authProvider.overrideWith(_StubAuthNotifier.new),
-        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository()),
-      ],
-      child: const MemosGoApp(),
-    ));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    final db = await buildSeededDb(
+        normal: _defaultMemos(), deleted: _defaultDeleted());
+    await _pumpApp(tester, db);
 
     // Drawer -> tag directory -> work.
     await tester.tap(find.byIcon(Icons.menu));
@@ -207,15 +138,9 @@ void main() {
   testWidgets('drawer shows stats, heatmap, menu and tag directory',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        authProvider.overrideWith(_StubAuthNotifier.new),
-        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository()),
-      ],
-      child: const MemosGoApp(),
-    ));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    final db = await buildSeededDb(
+        normal: _defaultMemos(), deleted: _defaultDeleted());
+    await _pumpApp(tester, db);
 
     await tester.tap(find.byIcon(Icons.menu));
     await tester.pump();
@@ -250,30 +175,16 @@ void main() {
 
   testWidgets('tag tree folds hierarchical tags by / separator', (tester) async {
     SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        authProvider.overrideWith(_StubAuthNotifier.new),
-        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository(
-              memos: [
-                _FakeMemoRepository._memo('a', 'one #level1',
-                    tags: const ['level1']),
-                _FakeMemoRepository._memo('b', 'two #level1',
-                    tags: const ['level1']),
-                _FakeMemoRepository._memo('c', 'three #level1/level2',
-                    tags: const ['level1/level2']),
-                _FakeMemoRepository._memo('d', 'four #level1/level2',
-                    tags: const ['level1/level2']),
-                _FakeMemoRepository._memo('e', 'five #level1/level2/deep',
-                    tags: const ['level1/level2/deep']),
-                _FakeMemoRepository._memo('f', 'six #other',
-                    tags: const ['other']),
-              ],
-            )),
-      ],
-      child: const MemosGoApp(),
-    ));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    final db = await buildSeededDb(normal: [
+      testMemo('a', 'one #level1', tags: const ['level1']),
+      testMemo('b', 'two #level1', tags: const ['level1']),
+      testMemo('c', 'three #level1/level2', tags: const ['level1/level2']),
+      testMemo('d', 'four #level1/level2', tags: const ['level1/level2']),
+      testMemo('e', 'five #level1/level2/deep',
+          tags: const ['level1/level2/deep']),
+      testMemo('f', 'six #other', tags: const ['other']),
+    ]);
+    await _pumpApp(tester, db);
 
     await tester.tap(find.byIcon(Icons.menu));
     await tester.pumpAndSettle();
@@ -308,20 +219,12 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final memos = List.generate(
       12,
-      (i) => _FakeMemoRepository._memo('m$i', 'Random note $i #walk',
+      (i) => testMemo('m$i', 'Random note $i #walk',
           tags: const ['walk'],
           created: DateTime.now().subtract(Duration(days: i))),
     );
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        authProvider.overrideWith(_StubAuthNotifier.new),
-        memoRepositoryProvider
-            .overrideWith((ref) => _FakeMemoRepository(memos: memos)),
-      ],
-      child: const MemosGoApp(),
-    ));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    final db = await buildSeededDb(normal: memos);
+    await _pumpApp(tester, db);
 
     await tester.tap(find.text('Random walk'));
     await tester.pump();
@@ -348,15 +251,9 @@ void main() {
   testWidgets('daily review resurfaces past memos and on-this-day',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        authProvider.overrideWith(_StubAuthNotifier.new),
-        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository()),
-      ],
-      child: const MemosGoApp(),
-    ));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    final db = await buildSeededDb(
+        normal: _defaultMemos(), deleted: _defaultDeleted());
+    await _pumpApp(tester, db);
 
     await tester.tap(find.text('Daily review'));
     await tester.pump();
@@ -388,15 +285,9 @@ void main() {
     tester.view.physicalSize = const Size(393, 852);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        authProvider.overrideWith(_StubAuthNotifier.new),
-        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository()),
-      ],
-      child: const MemosGoApp(),
-    ));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    final db = await buildSeededDb(
+        normal: _defaultMemos(), deleted: _defaultDeleted());
+    await _pumpApp(tester, db);
 
     await tester.tap(find.byIcon(Icons.menu));
     await tester.pumpAndSettle();
@@ -418,15 +309,9 @@ void main() {
 
   testWidgets('trash lists deleted memos with restore action', (tester) async {
     SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        authProvider.overrideWith(_StubAuthNotifier.new),
-        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository()),
-      ],
-      child: const MemosGoApp(),
-    ));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    final db = await buildSeededDb(
+        normal: _defaultMemos(), deleted: _defaultDeleted());
+    await _pumpApp(tester, db);
 
     // Open the drawer and enter the trash.
     await tester.tap(find.byIcon(Icons.menu));
@@ -441,6 +326,9 @@ void main() {
     expect(find.text('Restore'), findsOneWidget);
     expect(find.text('Delete permanently'), findsOneWidget);
 
+    // Restore fails offline instantly (unreachable server facade) and the
+    // fallback writes straight to the local mirror; the trash stream then
+    // drops the row.
     await tester.tap(find.text('Restore'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
@@ -453,7 +341,7 @@ void main() {
     // Regression: a single full-width image inside the horizontal gallery
     // ListView used double.infinity width under unbounded constraints.
     const pic = Attachment(name: 'attachments/pic', filename: 'pic.png', type: 'image/png');
-    final memos = [
+    final db = await buildSeededDb(normal: [
       Memo(
         name: 'memos/one-img',
         content: 'single image memo',
@@ -466,17 +354,8 @@ void main() {
         attachments: const [pic, pic],
         createTime: DateTime.now().subtract(const Duration(hours: 1)),
       ),
-    ];
-    SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        authProvider.overrideWith(_StubAuthNotifier.new),
-        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository(memos: memos)),
-      ],
-      child: const MemosGoApp(),
-    ));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    ]);
+    await _pumpApp(tester, db);
 
     expect(tester.takeException(), isNull);
     expect(find.text('single image memo'), findsOneWidget);
@@ -486,24 +365,15 @@ void main() {
   testWidgets('tapping a memo image opens the fullscreen viewer',
       (tester) async {
     const pic = Attachment(name: 'attachments/pic', filename: 'pic.png', type: 'image/png');
-    final memos = [
+    final db = await buildSeededDb(normal: [
       Memo(
         name: 'memos/one-img',
         content: 'single image memo',
         attachments: const [pic],
         createTime: DateTime.now(),
       ),
-    ];
-    SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        authProvider.overrideWith(_StubAuthNotifier.new),
-        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository(memos: memos)),
-      ],
-      child: const MemosGoApp(),
-    ));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    ]);
+    await _pumpApp(tester, db);
 
     final image = find.byType(AttachmentImage).first;
     await tester.ensureVisible(image);

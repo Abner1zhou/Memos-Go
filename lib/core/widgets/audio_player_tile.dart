@@ -2,18 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
 /// Inline play/pause control for an audio attachment, streaming through the
-/// bearer-protected file endpoint. [compact] renders the square variant used
-/// by the editor's attachment strip instead of the full-width detail row.
+/// bearer-protected file endpoint (or playing a local file while the
+/// attachment is only available offline). [compact] renders the square
+/// variant used by the editor's attachment strip instead of the full-width
+/// detail row.
 class AudioAttachmentTile extends StatefulWidget {
   const AudioAttachmentTile({
     super.key,
     required this.url,
     required this.headers,
+    this.localPath,
     this.compact = false,
   });
 
   final String url;
   final Map<String, String> headers;
+
+  /// Local file backing a pending (not yet uploaded) attachment.
+  final String? localPath;
+
   final bool compact;
 
   @override
@@ -32,9 +39,14 @@ class _AudioAttachmentTileState extends State<AudioAttachmentTile> {
 
   Future<void> _init() async {
     try {
-      await _player.setAudioSource(
-        AudioSource.uri(Uri.parse(widget.url), headers: widget.headers),
-      );
+      final path = widget.localPath;
+      if (path != null && path.isNotEmpty) {
+        await _player.setFilePath(path);
+      } else {
+        await _player.setAudioSource(
+          AudioSource.uri(Uri.parse(widget.url), headers: widget.headers),
+        );
+      }
     } catch (_) {
       if (mounted) setState(() => _failed = true);
     }

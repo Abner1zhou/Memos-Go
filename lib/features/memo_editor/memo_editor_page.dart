@@ -17,6 +17,7 @@ import '../../data/api/asr_api.dart';
 import '../../data/api/memos_api_client.dart';
 import '../../data/models/models.dart';
 import '../../data/repositories/asr_repository.dart';
+import '../../data/repositories/cached_memo_repository.dart';
 import '../../data/repositories/memo_repository.dart';
 import '../../providers/asr_providers.dart';
 import '../../providers/auth_providers.dart';
@@ -275,6 +276,7 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
       _snack(l10n.contentEmpty);
       return;
     }
+    var savedOffline = false;
     setState(() => _saving = true);
     try {
       final repo = ref.read(memoRepositoryProvider)!;
@@ -285,6 +287,9 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
           attachments: _attachments,
         );
         ref.read(memoMutationProvider.notifier).upsert(created);
+        if (repo is CachedMemoRepository) {
+          savedOffline = await repo.isPendingSync(created.name);
+        }
       } else {
         final updated = await repo.updateMemo(
           _editing!.copyWith(
@@ -301,9 +306,23 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
         ref
             .read(memoMutationProvider.notifier)
             .upsert(updated.copyWith(attachments: _attachments));
+        if (repo is CachedMemoRepository) {
+          savedOffline = await repo.isPendingSync(updated.name);
+        }
       }
       ref.invalidate(memoInsightsProvider);
-      if (mounted) context.pop();
+      if (!mounted) return;
+      if (savedOffline) {
+        // Capture the root messenger before popping: the hint should
+        // surface on the page underneath the fullscreen editor.
+        final messenger = ScaffoldMessenger.of(context);
+        context.pop();
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(l10n.savedOffline)));
+      } else {
+        context.pop();
+      }
     } catch (e) {
       _snack('${l10n.save}: ${_messageOf(e)}');
     } finally {
@@ -509,19 +528,29 @@ class _AttachmentThumb extends StatelessWidget {
               width: 80,
               height: 80,
               child: attachment.isImage
-                  ? Image.network(
-                      repo.attachmentUrl(attachment, thumbnail: true),
-                      headers: repo.authHeaders,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => ColoredBox(
-                        color: theme.colorScheme.surfaceContainerHighest,
-                        child: const Icon(Icons.description_outlined),
-                      ),
-                    )
+                  ? (attachment.isPendingUpload
+                      ? Image.file(
+                          File(attachment.localPath!),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => ColoredBox(
+                            color: theme.colorScheme.surfaceContainerHighest,
+                            child: const Icon(Icons.description_outlined),
+                          ),
+                        )
+                      : Image.network(
+                          repo.attachmentUrl(attachment, thumbnail: true),
+                          headers: repo.authHeaders,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => ColoredBox(
+                            color: theme.colorScheme.surfaceContainerHighest,
+                            child: const Icon(Icons.description_outlined),
+                          ),
+                        ))
                   : attachment.isAudio
                       ? AudioAttachmentTile(
                           url: repo.attachmentUrl(attachment),
                           headers: repo.authHeaders,
+                          localPath: attachment.localPath,
                           compact: true,
                         )
                       : ColoredBox(

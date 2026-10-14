@@ -18,6 +18,7 @@ import 'features/settings/settings_page.dart';
 import 'features/trash/trash_page.dart';
 import 'providers/auth_providers.dart';
 import 'providers/settings_providers.dart';
+import 'providers/sync_providers.dart';
 
 /// Root navigator for the app router; public so tests can build a GoRouter
 /// over [buildAppRoutes], whose sub-routes target this key.
@@ -123,6 +124,8 @@ class MemosGoApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final router = ref.watch(_routerProvider);
+    // Keeps the sync engine alive for the whole session while signed in.
+    ref.watch(syncEngineProvider);
     return MaterialApp.router(
       onGenerateTitle: (context) =>
           AppLocalizations.of(context)!.appTitle,

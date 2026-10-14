@@ -104,8 +104,11 @@ Future<void> _createMemoFromRecording(
   }
 
   final cleanTag = tag?.trim();
+  // Offline ASR failure degrades to an audio-only memo; a placeholder keeps
+  // the content non-empty so a later push is accepted by the server.
+  final bodyText = text.isNotEmpty ? text : l10n.voiceMemoUntitled;
   final content =
-      (cleanTag == null || cleanTag.isEmpty) ? text : '#$cleanTag $text';
+      (cleanTag == null || cleanTag.isEmpty) ? bodyText : '#$cleanTag $bodyText';
   try {
     final memo = await repo.createMemo(
       content: content,

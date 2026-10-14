@@ -68,6 +68,7 @@ class _AttachmentViewerPageState extends State<AttachmentViewerPage> {
             itemBuilder: (context, i) => _ZoomableImage(
               url: widget.repo.attachmentUrl(widget.images[i]),
               headers: widget.repo.authHeaders,
+              localPath: widget.images[i].localPath,
             ),
           ),
           SafeArea(
@@ -100,10 +101,15 @@ class _AttachmentViewerPageState extends State<AttachmentViewerPage> {
 /// A single image that pans when zoomed (below 1x the horizontal drag is
 /// left to the surrounding PageView).
 class _ZoomableImage extends StatefulWidget {
-  const _ZoomableImage({required this.url, required this.headers});
+  const _ZoomableImage({
+    required this.url,
+    required this.headers,
+    this.localPath,
+  });
 
   final String url;
   final Map<String, String> headers;
+  final String? localPath;
 
   @override
   State<_ZoomableImage> createState() => _ZoomableImageState();
@@ -159,6 +165,7 @@ class _ZoomableImageState extends State<_ZoomableImage> {
           child: AttachmentImage(
             url: widget.url,
             headers: widget.headers,
+            localPath: widget.localPath,
             fit: BoxFit.contain,
           ),
         ),
