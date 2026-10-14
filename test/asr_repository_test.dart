@@ -54,9 +54,14 @@ void main() {
 
   test('non-string fields do not crash parsing', () async {
     storage.values['memos_go.asrConfig'] =
-        '{"baseUrl": 42, "model": "m", "keepAudio": "yes"}';
+        '{"dialect": 7, "baseUrl": 42, "model": "m", "language": [], '
+        '"keepAudio": "yes"}';
     final loaded = await repo.load();
+    expect(loaded.dialect, AsrDialect.openai);
     expect(loaded.baseUrl, '');
+    // A bad field must not wipe out the valid fields saved alongside it.
+    expect(loaded.model, 'm');
+    expect(loaded.language, '');
     expect(loaded.keepAudio, isTrue);
   });
 

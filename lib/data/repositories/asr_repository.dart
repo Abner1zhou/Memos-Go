@@ -60,13 +60,17 @@ class AsrSettings {
         'keepAudio': keepAudio,
       };
 
+  /// Tolerates non-string fields: they coerce to '' instead of throwing, so
+  /// one bad field cannot wipe out the rest of the saved config.
+  static String _asString(Object? value) => value is String ? value : '';
+
   factory AsrSettings.fromJson(Map<String, dynamic> json) => AsrSettings(
-        dialect: asrDialectFromName(json['dialect'] as String?),
-        baseUrl: json['baseUrl'] as String? ?? '',
-        apiKey: json['apiKey'] as String? ?? '',
-        model: json['model'] as String? ?? '',
-        language: json['language'] as String? ?? '',
-        keepAudio: json['keepAudio'] as bool? ?? true,
+        dialect: asrDialectFromName(_asString(json['dialect'])),
+        baseUrl: _asString(json['baseUrl']),
+        apiKey: _asString(json['apiKey']),
+        model: _asString(json['model']),
+        language: _asString(json['language']),
+        keepAudio: json['keepAudio'] is bool ? json['keepAudio'] as bool : true,
       );
 }
 
