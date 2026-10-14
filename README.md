@@ -14,6 +14,7 @@
 - **标签**：基于用户统计的标签计数，点击进入按标签筛选的列表
 - **搜索**：基于服务端 CEL filter 的全文搜索
 - **附件图片**：通过 Bearer 鉴权的 `/file/attachments` 展示，支持缩略图
+- **AI 摘要（LLM）**：配置任意 OpenAI 兼容端点（DeepSeek / Qwen / SiliconFlow / OpenRouter / Ollama…），每日回顾页一键生成今日要点与往年记忆呼应，按日缓存
 - **外观**：Material 3、亮/暗/跟随系统主题、中英文界面（跟随系统或手动）
 
 ## 技术栈
