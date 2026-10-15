@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'chat_dao.dart';
 import 'embedding_dao.dart';
 import 'memo_dao.dart';
 
@@ -120,9 +121,47 @@ class MemoEmbeddings extends Table {
   Set<Column> get primaryKey => {accountId, memoUid, model};
 }
 
+/// One local chat conversation with the memories (never synced).
+@DataClassName('ChatSessionsRow')
+class ChatSessions extends Table {
+  TextColumn get accountId => text()();
+  TextColumn get id => text()();
+  TextColumn get title => text().withDefault(const Constant(''))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {accountId, id};
+}
+
+/// One turn in a chat session; [sources] is the JSON citations payload of
+/// assistant answers (see [ChatSource] in chat_dao.dart).
+@DataClassName('ChatMessagesRow')
+@TableIndex(name: 'idx_chat_messages_session', columns: {#accountId, #sessionId, #seq})
+class ChatMessages extends Table {
+  TextColumn get accountId => text()();
+  TextColumn get sessionId => text()();
+  IntColumn get seq => integer()();
+  TextColumn get role => text()();
+  TextColumn get content => text()();
+  TextColumn get sources => text().withDefault(const Constant('[]'))();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {accountId, sessionId, seq};
+}
+
 @DriftDatabase(
-  tables: [Memos, MemoTags, PendingAttachments, SyncMeta, MemoEmbeddings],
-  daos: [MemoDao, EmbeddingDao],
+  tables: [
+    Memos,
+    MemoTags,
+    PendingAttachments,
+    SyncMeta,
+    MemoEmbeddings,
+    ChatSessions,
+    ChatMessages,
+  ],
+  daos: [MemoDao, EmbeddingDao, ChatDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
@@ -134,7 +173,7 @@ class AppDatabase extends _$AppDatabase {
       : super(DatabaseConnection(e, closeStreamsSynchronously: true));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -147,6 +186,13 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
                 'CREATE INDEX IF NOT EXISTS idx_memo_embeddings_account '
                 'ON memo_embeddings (account_id, model)');
+          }
+          if (from < 3) {
+            await m.createTable(chatSessions);
+            await m.createTable(chatMessages);
+            await customStatement(
+                'CREATE INDEX IF NOT EXISTS idx_chat_messages_session '
+                'ON chat_messages (account_id, session_id, seq)');
           }
         },
       );

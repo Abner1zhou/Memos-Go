@@ -10,6 +10,8 @@ mixin _$MemoDaoMixin on DatabaseAccessor<AppDatabase> {
       attachedDatabase.pendingAttachments;
   $SyncMetaTable get syncMeta => attachedDatabase.syncMeta;
   $MemoEmbeddingsTable get memoEmbeddings => attachedDatabase.memoEmbeddings;
+  $ChatSessionsTable get chatSessions => attachedDatabase.chatSessions;
+  $ChatMessagesTable get chatMessages => attachedDatabase.chatMessages;
   MemoDaoManager get managers => MemoDaoManager(this);
 }
 
@@ -32,4 +34,8 @@ class MemoDaoManager {
         _db.attachedDatabase,
         _db.memoEmbeddings,
       );
+  $$ChatSessionsTableTableManager get chatSessions =>
+      $$ChatSessionsTableTableManager(_db.attachedDatabase, _db.chatSessions);
+  $$ChatMessagesTableTableManager get chatMessages =>
+      $$ChatMessagesTableTableManager(_db.attachedDatabase, _db.chatMessages);
 }
