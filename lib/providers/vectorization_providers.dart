@@ -32,6 +32,9 @@ final vectorizationStateProvider = StreamProvider<VectorizationState>((ref) {
   final controller = StreamController<VectorizationState>();
   void listener() => controller.add(engine.state.value);
   engine.state.addListener(listener);
+  // Seed with the current progress so a fresh subscriber (e.g. the settings
+  // page opened mid-pass or after indexing) doesn't start at zero.
+  controller.add(engine.state.value);
   controller.onCancel = () {
     engine.state.removeListener(listener);
     controller.close();

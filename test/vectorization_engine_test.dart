@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:drift/native.dart';
@@ -34,6 +35,29 @@ class FakeVectorRepository extends LlmRepository {
 
 Memo memo(String uid, String content) => Memo(
     name: 'memos/$uid', content: content, createTime: DateTime(2026, 10, 1));
+
+/// Embeddings stall on [gate] so a test can interleave clearVectors with an
+/// in-flight batch.
+class GatedVectorRepository extends FakeVectorRepository {
+  GatedVectorRepository(super.settings, {required this.gate});
+
+  final Completer<void> gate;
+
+  @override
+  Future<List<List<double>>> embeddings(LlmSettings s,
+      {required List<String> inputs}) async {
+    await gate.future;
+    return super.embeddings(s, inputs: inputs);
+  }
+}
+
+/// load() blows up: run() must absorb it into state, not throw.
+class ThrowingLoadRepository extends FakeVectorRepository {
+  ThrowingLoadRepository(super.settings);
+
+  @override
+  Future<LlmSettings> load() async => throw Exception('keychain exploded');
+}
 
 const configured = LlmSettings(
   baseUrl: 'https://llm.example.com/v1',
@@ -163,5 +187,39 @@ void main() {
     final e = await engine(FakeVectorRepository(configured));
     expect(e.state.value.status, VectorStatus.idle);
     expect(await db.embeddingDao.embeddedHashes('acc-1', 'e-m'), isEmpty);
+  });
+
+  test('clearVectors aborts an in-flight pass and leaves it paused',
+      () async {
+    for (var i = 0; i < 20; i++) {
+      await db.memoDao.upsertLocalMemo('acc-1', memo('m$i', 'content $i'));
+    }
+    final gate = Completer<void>();
+    final e = VectorizationEngine(
+        accountId: 'acc-1',
+        db: db,
+        repository: GatedVectorRepository(configured, gate: gate));
+    final done = e.run();
+    // Let the pass reach the gated embeddings call.
+    await Future<void>.delayed(Duration.zero);
+    await e.clearVectors();
+    gate.complete();
+    await done;
+
+    // Nothing resurrected after the wipe, and the engine stays paused
+    // until resume().
+    expect(await db.embeddingDao.embeddedHashes('acc-1', 'e-m'), isEmpty);
+    expect(e.state.value.status, VectorStatus.paused);
+  });
+
+  test('load() failure lands in state instead of throwing', () async {
+    await db.memoDao.upsertLocalMemo('acc-1', memo('a', 'x'));
+    final e = VectorizationEngine(
+        accountId: 'acc-1', db: db, repository: ThrowingLoadRepository(
+            configured));
+    await e.run();
+
+    expect(e.state.value.status, VectorStatus.error);
+    expect(e.state.value.lastError, contains('keychain exploded'));
   });
 }

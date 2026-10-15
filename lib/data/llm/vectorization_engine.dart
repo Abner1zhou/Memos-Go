@@ -67,6 +67,9 @@ class VectorizationEngine {
 
   bool _running = false;
   bool _paused = false;
+  // Bumped by clearVectors so an in-flight pass stops instead of
+  // resurrecting the rows the clear just deleted.
+  int _generation = 0;
   Timer? _debounce;
   StreamSubscription<void>? _corpusSub;
 
@@ -92,6 +95,7 @@ class VectorizationEngine {
     if (_running || _paused) return;
     _running = true;
     try {
+      final generation = _generation;
       final settings = await _repository.load();
       final model = settings.embeddingModel.trim();
       if (!settings.embeddingsConfigured) {
@@ -112,12 +116,14 @@ class VectorizationEngine {
           total: corpus.length));
 
       for (var i = 0; i < pending.length; i += batchSize) {
-        if (_paused) return;
+        if (_paused || generation != _generation) return;
         final batch = pending.skip(i).take(batchSize).toList();
         try {
           final vectors = await _repository.embeddings(
               settings,
               inputs: [for (final m in batch) m.content]);
+          // A clear landing mid-batch must not resurrect its deleted rows.
+          if (generation != _generation) return;
           if (vectors.length != batch.length) {
             throw LlmApiException(
                 'Embedding count mismatch: ${vectors.length} of ${batch.length}');
@@ -142,6 +148,7 @@ class VectorizationEngine {
         _state(state.value.copyWith(embedded: done));
       }
 
+      if (generation != _generation) return;
       await _dao.deleteOrphans(accountId);
       // A completed pass makes the current model the only source of truth;
       // rows of previously used models are dead weight (the 3-column PK
@@ -151,6 +158,10 @@ class VectorizationEngine {
           status: VectorStatus.idle,
           embedded: corpus.length,
           total: corpus.length));
+    } catch (e) {
+      // Last resort: settings/corpus reads must never crash the caller.
+      _state(state.value.copyWith(
+          status: VectorStatus.error, lastError: e.toString()));
     } finally {
       _running = false;
     }
@@ -169,12 +180,15 @@ class VectorizationEngine {
     schedule(delay: Duration.zero);
   }
 
-  /// Wipes the account's vectors and resets progress. A fresh pass needs a
-  /// new trigger (settings save, corpus change, or resume).
+  /// Wipes the account's vectors and resets progress. Any in-flight pass is
+  /// stopped (it must not re-write the rows just deleted) and stays paused;
+  /// a fresh pass needs [resume], a settings save, or a corpus change.
   Future<void> clearVectors() async {
     _debounce?.cancel();
+    _generation++;
+    _paused = true;
     await _dao.deleteAllForAccount(accountId);
-    _state(const VectorizationState());
+    _state(const VectorizationState(status: VectorStatus.paused));
   }
 
   Future<void> dispose() async {

@@ -111,11 +111,15 @@ class EmbeddingDao extends DatabaseAccessor<AppDatabase>
     ];
   }
 
-  /// Drops embedding rows whose memo no longer exists (server-deleted).
+  /// Drops embedding rows that no longer belong to the corpus: memos gone
+  /// (server-deleted), archived, or empty-content — i.e. anything the
+  /// [corpus] predicate excludes keeps no vector.
   Future<void> deleteOrphans(String accountId) async {
     final remaining = selectOnly(memos)
       ..addColumns([memos.uid])
-      ..where(memos.accountId.equals(accountId));
+      ..where(memos.accountId.equals(accountId) &
+          memos.state.equals(MemoState.normal.wireName) &
+          memos.content.equals('').not());
     await (delete(memoEmbeddings)
           ..where((e) =>
               e.accountId.equals(accountId) &

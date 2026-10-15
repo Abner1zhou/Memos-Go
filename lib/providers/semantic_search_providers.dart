@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/utils/vector_math.dart';
+import '../data/local/embedding_dao.dart' show VectorRow;
 import '../data/local/memo_codec.dart' show MemoRecord;
 import 'auth_providers.dart';
 import 'llm_providers.dart';
@@ -22,16 +23,18 @@ final semanticSearchProvider =
   if (account == null) return const [];
 
   final repo = ref.watch(llmRepositoryProvider);
-  final settings = await repo.load();
-  if (!settings.embeddingsConfigured) return const [];
-
   final db = ref.watch(appDatabaseProvider);
-  final model = settings.embeddingModel.trim();
-  final vectors = await db.embeddingDao.vectorsForModel(account.id, model);
-  if (vectors.isEmpty) return const [];
 
+  // Keychain read and endpoint call both degrade to "no hits" instead of
+  // taking the keyword feed down with them.
+  final List<VectorRow> vectors;
   final List<List<double>> queryVectors;
   try {
+    final settings = await repo.load();
+    if (!settings.embeddingsConfigured) return const [];
+    vectors = await db.embeddingDao
+        .vectorsForModel(account.id, settings.embeddingModel.trim());
+    if (vectors.isEmpty) return const [];
     queryVectors = await repo.embeddings(settings, inputs: [trimmed]);
   } catch (_) {
     return const [];

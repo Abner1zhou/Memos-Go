@@ -52,6 +52,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final semantic = _semanticQuery.isEmpty
         ? const <MemoRecord>[]
         : ref.watch(semanticSearchProvider(_semanticQuery)).value ?? const <MemoRecord>[];
+    // A memo the keyword feed already shows must not appear twice.
+    final semanticUnique = [
+      for (final r in semantic)
+        if (!list.memos.any((m) => m.name == r.memo.name)) r,
+    ];
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.searchTitle)),
@@ -65,7 +70,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               onChanged: _onQueryChanged,
             ),
           ),
-          if (semantic.isNotEmpty && repo != null)
+          if (semanticUnique.isNotEmpty && repo != null)
             SizedBox(
               height: 170,
               child: Column(
@@ -86,13 +91,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                      itemCount: semantic.length,
+                      itemCount: semanticUnique.length,
                       itemBuilder: (context, index) => SizedBox(
                         width: 280,
                         child: Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: MemoCard(
-                              memo: semantic[index].memo, repo: repo),
+                              memo: semanticUnique[index].memo, repo: repo),
                         ),
                       ),
                     ),

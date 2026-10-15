@@ -85,13 +85,16 @@ class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
   }
 
   /// Memos by uid in the given order; missing uids are skipped. Used by
-  /// semantic search to materialize similarity-ranked hits.
+  /// semantic search to materialize similarity-ranked hits. Archived and
+  /// deleted memos stay invisible, matching the home feed.
   Future<List<MemoRecord>> recordsByUids(
       String accountId, List<String> uids) async {
     if (uids.isEmpty) return const [];
     final query = select(memos)
       ..where((r) =>
-          r.accountId.equals(accountId) & r.uid.isIn(uids));
+          r.accountId.equals(accountId) &
+          r.uid.isIn(uids) &
+          r.state.equals(MemoState.normal.wireName));
     final rows = await query.get();
     final byUid = {
       for (final record in await _withTags(accountId, rows))
@@ -318,9 +321,13 @@ class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
         await (delete(memoTags)..where((t) =>
                 t.accountId.equals(accountId) &
                 t.memoUid.isNotInQuery(remaining))).go();
+        // Same predicate as EmbeddingDao.corpus: only normal, non-empty
+        // memos ever earn a vector, so anything else is an orphan.
         final remainingEmbeddings = selectOnly(memos)
           ..addColumns([memos.uid])
-          ..where(memos.accountId.equals(accountId));
+          ..where(memos.accountId.equals(accountId) &
+              memos.state.equals(MemoState.normal.wireName) &
+              memos.content.equals('').not());
         await (delete(memoEmbeddings)..where((e) =>
                 e.accountId.equals(accountId) &
                 e.memoUid.isNotInQuery(remainingEmbeddings))).go();

@@ -136,4 +136,25 @@ void main() {
         await db.memoDao.recordsByUids('acc-1', ['b', 'missing', 'a']);
     expect(records.map((r) => r.memo.uid), ['b', 'a']);
   });
+
+  test('recordsByUids excludes archived memos', () async {
+    await seed([
+      memo('a', 'visible'),
+      memo('b', 'archived away', state: MemoState.archived),
+    ]);
+    final records = await db.memoDao.recordsByUids('acc-1', ['a', 'b']);
+    expect(records.map((r) => r.memo.uid), ['a']);
+  });
+
+  test('deleteOrphans sweeps the vector of an archived memo', () async {
+    // The memo still exists but left the corpus predicate (archived), so
+    // its stale vector must go.
+    await seed([memo('a', 'archived away', state: MemoState.archived)]);
+    await db.embeddingDao.upsertAll('acc-1', 'm', [
+      EmbeddingWrite(
+          uid: 'a', contentHash: 1, vector: Float32List.fromList([1])),
+    ]);
+    await db.embeddingDao.deleteOrphans('acc-1');
+    expect(await db.embeddingDao.embeddedHashes('acc-1', 'm'), isEmpty);
+  });
 }

@@ -100,5 +100,8 @@ void main() {
     expect(find.text('语义相关'), findsOneWidget);
     // Semantic-only hit renders although the keyword query misses it.
     expect(find.textContaining('翻车的复盘'), findsOneWidget);
+    // The keyword feed already shows the k8s memo; the rail must not
+    // duplicate it.
+    expect(find.textContaining('k8s 滚动更新'), findsOneWidget);
   });
 }
