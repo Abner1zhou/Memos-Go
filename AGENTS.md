@@ -22,11 +22,12 @@ flutter run              # iOS 模拟器或 Android 设备
 - `app.dart` / `main.dart` — 入口、Material 3 主题、go_router 路由（含登录守卫 redirect）。`buildAppRoutes()` 与 `rootNavigatorKey` 标记 `@visibleForTesting` 供测试使用，不要改成私有。
 - `core/` — 主题、通用组件（Markdown 渲染、附件图片）、工具。不依赖 features/。
 - `data/api/` — dio 封装（`createMemosDio`：Bearer 鉴权 + 统一把错误映射为 `MemosApiException`）与 Memos v1 API 客户端。baseUrl 必须已规范化（scheme+host+port，无尾斜杠、无 `/api` 后缀）。`isNetworkFailure(e)` 判定"离线类错误"（连接失败/超时）——只有这类错误才允许走离线降级，4xx/5xx 必须照常抛出。另有 ASR（`asr_api.dart`）与 LLM（`llm_api.dart`）两个 OpenAI 兼容第三方客户端，错误分别映射为 `AsrApiException` / `LlmApiException`，设置存 secure storage（见对应 `*_repository.dart` 与 `providers/asr_providers.dart` / `providers/llm_providers.dart`）。
-- `data/local/` — Drift（SQLite）本地镜像库。`app_database.dart`（schema，改表后跑 build_runner）、`memo_dao.dart`（所有查询一律带 accountId 隔离多账号）、`memo_codec.dart`（Memo↔行防御式互转）。`AppDatabase.forTests()` 用于 widget 测试（同步关流，避免残留 Timer）。
+- `data/local/` — Drift（SQLite）本地镜像库。`app_database.dart`（schema，改表后跑 build_runner）、`memo_dao.dart`（所有查询一律带 accountId 隔离多账号）、`memo_codec.dart`（Memo↔行防御式互转）。`AppDatabase.forTests()` 用于 widget 测试（同步关流，避免残留 Timer）。P2 起另有 `embedding_dao.dart`（MemoEmbeddings 表，schemaVersion 2，账号隔离），向量行随 memo 删除/sweep/账号清除连带清理。
 - `data/sync/sync_engine.dart` — 同步引擎：push pending 行（create 带 `memoId` 幂等重放；update 404 转重建；delete 软删）→ pull 三趟全量（NORMAL/ARCHIVED/DELETED）→ 对账 sweep 清除服务端已不存在的 synced 行（任一可选趟被旧服务器拒绝则本轮跳过 sweep）。触发：联网恢复 / 回前台 / pending 队列增长 / 下拉刷新。
+- `data/llm/vectorization_engine.dart` — 向量化引擎：订阅 watchAll 防抖触发、单飞、批量 16、失败停摆记录（embedding 表即断点状态），暂停/恢复/清除。
 - `data/models/` — JSON 模型，一律防御性解析（字段缺失/类型不符不能崩）。
 - `data/repositories/` — 登录/多账号、memo 仓库。`CachedMemoRepository` 是本地优先门面（UI 一律经它）：读全走本地库（`watchMemosPage`/`watchMemo` 响应式流），写先打服务端、`isNetworkFailure` 时降级进 pending 队列；附件上传离线时落盘排队（`Attachment.localPath` 标记，UI 直接从本地文件渲染）。
-- `providers/` — Riverpod providers（会话、分页列表、标签、设置、`sync_providers.dart` 的引擎/在线状态/`syncStatusProvider`、`llm_providers.dart`）。
+- `providers/` — Riverpod providers（会话、分页列表、标签、设置、`sync_providers.dart` 的引擎/在线状态/`syncStatusProvider`、`llm_providers.dart`、`vectorization_providers.dart`、`semantic_search_providers.dart`）。
 - `features/<功能>/` — 页面级 UI，按功能分目录（drawer / memos / editor / detail / search / review / trash / settings / login）。
 
 依赖方向：features → providers → repositories → api/local/models；core 被各层复用。UI 不直接调 dio。
