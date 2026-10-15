@@ -1,18 +1,11 @@
-import 'dart:typed_data';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/utils/vector_math.dart';
-import '../data/local/embedding_dao.dart' show VectorRow;
 import '../data/local/memo_codec.dart' show MemoRecord;
 import 'auth_providers.dart';
-import 'llm_providers.dart';
-import 'sync_providers.dart' show appDatabaseProvider;
+import 'retrieval_providers.dart';
 
-/// Semantic top-12 for a query, ranked by cosine similarity against the
-/// account's stored vectors. Degrades to an empty list when the LLM layer
-/// is unconfigured, has no embedding model, holds no vectors, or the
-/// endpoint fails — keyword search never breaks because of it.
+/// Semantic top-12 for a query, shared retrieval with chat. Degrades to an
+/// empty list on every failure path — keyword search never breaks.
 final semanticSearchProvider =
     FutureProvider.autoDispose.family<List<MemoRecord>, String>(
         (ref, query) async {
@@ -22,29 +15,12 @@ final semanticSearchProvider =
   final account = ref.watch(authProvider).activeAccount;
   if (account == null) return const [];
 
-  final repo = ref.watch(llmRepositoryProvider);
-  final db = ref.watch(appDatabaseProvider);
-
-  // Keychain read and endpoint call both degrade to "no hits" instead of
-  // taking the keyword feed down with them.
-  final List<VectorRow> vectors;
-  final List<List<double>> queryVectors;
   try {
-    final settings = await repo.load();
-    if (!settings.embeddingsConfigured) return const [];
-    vectors = await db.embeddingDao
-        .vectorsForModel(account.id, settings.embeddingModel.trim());
-    if (vectors.isEmpty) return const [];
-    queryVectors = await repo.embeddings(settings, inputs: [trimmed]);
+    final hits = await ref
+        .watch(retrievalServiceProvider)
+        .retrieve(account.id, trimmed);
+    return [for (final h in hits) h.record];
   } catch (_) {
     return const [];
   }
-  if (queryVectors.isEmpty || queryVectors.first.isEmpty) return const [];
-
-  final top = await topKSimilar(
-      Float32List.fromList(queryVectors.first),
-      {for (final row in vectors) row.uid: row.bytes},
-      12);
-  return db.memoDao.recordsByUids(
-      account.id, [for (final scored in top) scored.uid]);
 });

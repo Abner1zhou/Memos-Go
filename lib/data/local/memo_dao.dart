@@ -16,7 +16,15 @@ class MemoSlice {
 
 /// All local-database access for the memo mirror. Every query is scoped by
 /// [accountId] so multiple server accounts share one database file safely.
-@DriftAccessor(tables: [Memos, MemoTags, PendingAttachments, SyncMeta, MemoEmbeddings])
+@DriftAccessor(tables: [
+  Memos,
+  MemoTags,
+  PendingAttachments,
+  SyncMeta,
+  MemoEmbeddings,
+  ChatSessions,
+  ChatMessages,
+])
 class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
   MemoDao(super.db);
 
@@ -288,6 +296,11 @@ class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
                   p.accountId.equals(accountId) & p.memoUid.equals(localUid)))
               .write(
                   PendingAttachmentsCompanion(memoUid: Value(serverMemo.uid)));
+          await (update(memoEmbeddings)
+                ..where((e) =>
+                    e.accountId.equals(accountId) &
+                    e.memoUid.equals(localUid)))
+              .write(MemoEmbeddingsCompanion(memoUid: Value(serverMemo.uid)));
         }
         await _upsertRowAndTags(accountId, serverMemo,
             syncedAt: now, attachmentsDirty: const Value(false));
@@ -346,6 +359,12 @@ class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
             .go();
         await (delete(memoEmbeddings)
               ..where((e) => e.accountId.equals(accountId)))
+            .go();
+        await (delete(chatMessages)
+              ..where((m) => m.accountId.equals(accountId)))
+            .go();
+        await (delete(chatSessions)
+              ..where((s) => s.accountId.equals(accountId)))
             .go();
       });
 

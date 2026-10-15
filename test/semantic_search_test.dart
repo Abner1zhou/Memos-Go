@@ -71,10 +71,12 @@ void main() {
           uid: 'same',
           contentHash: 1,
           vector: Float32List.fromList([0.9, 0.1])),
+      // [0.5, 0.5] keeps the second hit above RetrievalService.minScore
+      // (0.30) so the ranking assertion still exercises both records.
       EmbeddingWrite(
           uid: 'off',
           contentHash: 1,
-          vector: Float32List.fromList([0.1, 0.9])),
+          vector: Float32List.fromList([0.5, 0.5])),
     ]);
     container = ProviderContainer(overrides: [
       appDatabaseProvider.overrideWithValue(db),
