@@ -419,6 +419,108 @@ class AppLocalizationsZh extends AppLocalizations {
   String get asrGoSettings => '去设置';
 
   @override
+  String get llmSettingsTitle => 'AI 助手';
+
+  @override
+  String get llmSettingsSubtitle =>
+      '配置 OpenAI 兼容的大模型接口，用于回顾页 AI 摘要等功能；支持 DeepSeek、Qwen、SiliconFlow、OpenRouter、Ollama 等';
+
+  @override
+  String get llmBaseUrl => '接口地址';
+
+  @override
+  String get llmBaseUrlHint => 'https://api.deepseek.com/v1';
+
+  @override
+  String get llmApiKey => 'API Key';
+
+  @override
+  String get llmChatModel => '对话模型';
+
+  @override
+  String get llmChatModelHint => 'deepseek-chat';
+
+  @override
+  String get llmEmbeddingModel => 'Embedding 模型（可选）';
+
+  @override
+  String get llmEmbeddingModelHint => 'text-embedding-3-small，留空则跳过向量相关功能';
+
+  @override
+  String get llmTest => '测试连接';
+
+  @override
+  String get llmTestOk => '对话接口连接成功';
+
+  @override
+  String get llmEmbeddingsTestOk => '向量接口连接成功';
+
+  @override
+  String get llmTestFailed => '接口测试失败';
+
+  @override
+  String get llmInvalidBaseUrl => '接口地址无效，需以 http(s):// 开头';
+
+  @override
+  String get llmClear => '清除配置';
+
+  @override
+  String get llmClearConfirm => '清除 AI 助手配置？';
+
+  @override
+  String get digestTitle => 'AI 摘要';
+
+  @override
+  String get digestGenerate => '生成 AI 摘要';
+
+  @override
+  String get digestRegenerate => '重新生成';
+
+  @override
+  String get digestGoConfig => '配置 AI 助手';
+
+  @override
+  String get digestNotConfigured => '配置大模型接口后，可生成今日摘要与记忆呼应';
+
+  @override
+  String get digestFailed => '生成失败';
+
+  @override
+  String get llmErrTimeout => '连接超时，请检查网络或代理';
+
+  @override
+  String get llmErrUnreachable => '无法连接到接口服务器';
+
+  @override
+  String get llmErrAuth => '认证失败，请检查 API Key';
+
+  @override
+  String get vecSection => '语义搜索';
+
+  @override
+  String get vecPrivacyNote => '向量化会将笔记内容发送到你配置的 embedding 端点，向量仅保存在本机。';
+
+  @override
+  String vecProgress(Object done, Object total) {
+    return '已向量化 $done/$total 条';
+  }
+
+  @override
+  String get vecPause => '暂停';
+
+  @override
+  String get vecResume => '继续';
+
+  @override
+  String get vecClear => '清除全部向量';
+
+  @override
+  String get vecClearConfirm => '清除已生成的全部向量？清除后向量化会暂停，点击“继续”才会重新开始。';
+
+  @override
+  String get searchSemantic => '语义相关';
+
+  @override
   String get voiceInput => '语音输入';
 
   @override

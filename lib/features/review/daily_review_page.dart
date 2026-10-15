@@ -8,6 +8,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/memo_providers.dart';
 import '../memos/memos_page.dart';
+import 'review_digest_card.dart';
 
 /// Daily review, flomo-style: every day resurfaces a random batch of past
 /// memos ("N days/months/years ago you wrote ..."), plus an "on this day in
@@ -103,6 +104,15 @@ class _DailyReviewPageState extends ConsumerState<DailyReviewPage> {
               onThisDay.putIfAbsent(created.year, () => []).add(memo);
             }
           }
+          final todayMemos = pool
+              .where((m) {
+                final created = m.createTime?.toLocal();
+                return created != null &&
+                    created.year == today.year &&
+                    created.month == today.month &&
+                    created.day == today.day;
+              })
+              .toList();
           final sortedYears = onThisDay.keys.toList()
             ..sort((a, b) => b.compareTo(a));
           // Recall samples exclude on-this-day memos so nothing shows twice.
@@ -111,12 +121,22 @@ class _DailyReviewPageState extends ConsumerState<DailyReviewPage> {
           final recalled =
               _sample(pool.where((m) => !seen.contains(m.name)).toList());
 
+          final showDigest = todayMemos.isNotEmpty || onThisDay.isNotEmpty;
           return ListView.builder(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
-            itemCount: sortedYears.length + recalled.length,
+            itemCount:
+                (showDigest ? 1 : 0) + sortedYears.length + recalled.length,
             itemBuilder: (context, index) {
-              if (index < sortedYears.length) {
-                final year = sortedYears[index];
+              if (showDigest && index == 0) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: ReviewDigestCard(
+                      today: todayMemos, onThisDay: onThisDay),
+                );
+              }
+              final i = index - (showDigest ? 1 : 0);
+              if (i < sortedYears.length) {
+                final year = sortedYears[i];
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -136,7 +156,7 @@ class _DailyReviewPageState extends ConsumerState<DailyReviewPage> {
                   ],
                 );
               }
-              final memo = recalled[index - sortedYears.length];
+              final memo = recalled[i - sortedYears.length];
               return Padding(
                 key: ValueKey('recall-$_roll-${memo.name}'),
                 padding: const EdgeInsets.only(bottom: 8),

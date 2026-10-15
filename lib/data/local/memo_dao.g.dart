@@ -9,6 +9,7 @@ mixin _$MemoDaoMixin on DatabaseAccessor<AppDatabase> {
   $PendingAttachmentsTable get pendingAttachments =>
       attachedDatabase.pendingAttachments;
   $SyncMetaTable get syncMeta => attachedDatabase.syncMeta;
+  $MemoEmbeddingsTable get memoEmbeddings => attachedDatabase.memoEmbeddings;
   MemoDaoManager get managers => MemoDaoManager(this);
 }
 
@@ -26,4 +27,9 @@ class MemoDaoManager {
       );
   $$SyncMetaTableTableManager get syncMeta =>
       $$SyncMetaTableTableManager(_db.attachedDatabase, _db.syncMeta);
+  $$MemoEmbeddingsTableTableManager get memoEmbeddings =>
+      $$MemoEmbeddingsTableTableManager(
+        _db.attachedDatabase,
+        _db.memoEmbeddings,
+      );
 }

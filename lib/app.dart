@@ -14,11 +14,13 @@ import 'features/review/daily_review_page.dart';
 import 'features/review/random_walk_page.dart';
 import 'features/search/search_page.dart';
 import 'features/settings/asr_settings_page.dart';
+import 'features/settings/llm_settings_page.dart';
 import 'features/settings/settings_page.dart';
 import 'features/trash/trash_page.dart';
 import 'providers/auth_providers.dart';
 import 'providers/settings_providers.dart';
 import 'providers/sync_providers.dart';
+import 'providers/vectorization_providers.dart';
 
 /// Root navigator for the app router; public so tests can build a GoRouter
 /// over [buildAppRoutes], whose sub-routes target this key.
@@ -98,6 +100,11 @@ List<RouteBase> buildAppRoutes() => [
             parentNavigatorKey: rootNavigatorKey,
             builder: (context, state) => const AsrSettingsPage(),
           ),
+          GoRoute(
+            path: 'llm',
+            parentNavigatorKey: rootNavigatorKey,
+            builder: (context, state) => const LlmSettingsPage(),
+          ),
         ],
       ),
       GoRoute(
@@ -126,6 +133,8 @@ class MemosGoApp extends ConsumerWidget {
     final router = ref.watch(_routerProvider);
     // Keeps the sync engine alive for the whole session while signed in.
     ref.watch(syncEngineProvider);
+    // Keeps the vectorization engine alive alongside sync.
+    ref.watch(vectorizationEngineProvider);
     return MaterialApp.router(
       onGenerateTitle: (context) =>
           AppLocalizations.of(context)!.appTitle,

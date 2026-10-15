@@ -1779,6 +1779,431 @@ class SyncMetaCompanion extends UpdateCompanion<SyncMetaRow> {
   }
 }
 
+class $MemoEmbeddingsTable extends MemoEmbeddings
+    with TableInfo<$MemoEmbeddingsTable, MemoEmbeddingsRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MemoEmbeddingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
+  @override
+  late final GeneratedColumn<String> accountId = GeneratedColumn<String>(
+    'account_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _memoUidMeta = const VerificationMeta(
+    'memoUid',
+  );
+  @override
+  late final GeneratedColumn<String> memoUid = GeneratedColumn<String>(
+    'memo_uid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _modelMeta = const VerificationMeta('model');
+  @override
+  late final GeneratedColumn<String> model = GeneratedColumn<String>(
+    'model',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentHashMeta = const VerificationMeta(
+    'contentHash',
+  );
+  @override
+  late final GeneratedColumn<int> contentHash = GeneratedColumn<int>(
+    'content_hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _vectorMeta = const VerificationMeta('vector');
+  @override
+  late final GeneratedColumn<Uint8List> vector = GeneratedColumn<Uint8List>(
+    'vector',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _embeddedAtMeta = const VerificationMeta(
+    'embeddedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> embeddedAt = GeneratedColumn<DateTime>(
+    'embedded_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    accountId,
+    memoUid,
+    model,
+    contentHash,
+    vector,
+    embeddedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'memo_embeddings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MemoEmbeddingsRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('account_id')) {
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['account_id']!, _accountIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_accountIdMeta);
+    }
+    if (data.containsKey('memo_uid')) {
+      context.handle(
+        _memoUidMeta,
+        memoUid.isAcceptableOrUnknown(data['memo_uid']!, _memoUidMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_memoUidMeta);
+    }
+    if (data.containsKey('model')) {
+      context.handle(
+        _modelMeta,
+        model.isAcceptableOrUnknown(data['model']!, _modelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_modelMeta);
+    }
+    if (data.containsKey('content_hash')) {
+      context.handle(
+        _contentHashMeta,
+        contentHash.isAcceptableOrUnknown(
+          data['content_hash']!,
+          _contentHashMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentHashMeta);
+    }
+    if (data.containsKey('vector')) {
+      context.handle(
+        _vectorMeta,
+        vector.isAcceptableOrUnknown(data['vector']!, _vectorMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_vectorMeta);
+    }
+    if (data.containsKey('embedded_at')) {
+      context.handle(
+        _embeddedAtMeta,
+        embeddedAt.isAcceptableOrUnknown(data['embedded_at']!, _embeddedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_embeddedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {accountId, memoUid, model};
+  @override
+  MemoEmbeddingsRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MemoEmbeddingsRow(
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}account_id'],
+      )!,
+      memoUid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}memo_uid'],
+      )!,
+      model: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model'],
+      )!,
+      contentHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}content_hash'],
+      )!,
+      vector: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}vector'],
+      )!,
+      embeddedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}embedded_at'],
+      )!,
+    );
+  }
+
+  @override
+  $MemoEmbeddingsTable createAlias(String alias) {
+    return $MemoEmbeddingsTable(attachedDatabase, alias);
+  }
+}
+
+class MemoEmbeddingsRow extends DataClass
+    implements Insertable<MemoEmbeddingsRow> {
+  final String accountId;
+  final String memoUid;
+  final String model;
+  final int contentHash;
+  final Uint8List vector;
+  final DateTime embeddedAt;
+  const MemoEmbeddingsRow({
+    required this.accountId,
+    required this.memoUid,
+    required this.model,
+    required this.contentHash,
+    required this.vector,
+    required this.embeddedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['account_id'] = Variable<String>(accountId);
+    map['memo_uid'] = Variable<String>(memoUid);
+    map['model'] = Variable<String>(model);
+    map['content_hash'] = Variable<int>(contentHash);
+    map['vector'] = Variable<Uint8List>(vector);
+    map['embedded_at'] = Variable<DateTime>(embeddedAt);
+    return map;
+  }
+
+  MemoEmbeddingsCompanion toCompanion(bool nullToAbsent) {
+    return MemoEmbeddingsCompanion(
+      accountId: Value(accountId),
+      memoUid: Value(memoUid),
+      model: Value(model),
+      contentHash: Value(contentHash),
+      vector: Value(vector),
+      embeddedAt: Value(embeddedAt),
+    );
+  }
+
+  factory MemoEmbeddingsRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MemoEmbeddingsRow(
+      accountId: serializer.fromJson<String>(json['accountId']),
+      memoUid: serializer.fromJson<String>(json['memoUid']),
+      model: serializer.fromJson<String>(json['model']),
+      contentHash: serializer.fromJson<int>(json['contentHash']),
+      vector: serializer.fromJson<Uint8List>(json['vector']),
+      embeddedAt: serializer.fromJson<DateTime>(json['embeddedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'accountId': serializer.toJson<String>(accountId),
+      'memoUid': serializer.toJson<String>(memoUid),
+      'model': serializer.toJson<String>(model),
+      'contentHash': serializer.toJson<int>(contentHash),
+      'vector': serializer.toJson<Uint8List>(vector),
+      'embeddedAt': serializer.toJson<DateTime>(embeddedAt),
+    };
+  }
+
+  MemoEmbeddingsRow copyWith({
+    String? accountId,
+    String? memoUid,
+    String? model,
+    int? contentHash,
+    Uint8List? vector,
+    DateTime? embeddedAt,
+  }) => MemoEmbeddingsRow(
+    accountId: accountId ?? this.accountId,
+    memoUid: memoUid ?? this.memoUid,
+    model: model ?? this.model,
+    contentHash: contentHash ?? this.contentHash,
+    vector: vector ?? this.vector,
+    embeddedAt: embeddedAt ?? this.embeddedAt,
+  );
+  MemoEmbeddingsRow copyWithCompanion(MemoEmbeddingsCompanion data) {
+    return MemoEmbeddingsRow(
+      accountId: data.accountId.present ? data.accountId.value : this.accountId,
+      memoUid: data.memoUid.present ? data.memoUid.value : this.memoUid,
+      model: data.model.present ? data.model.value : this.model,
+      contentHash: data.contentHash.present
+          ? data.contentHash.value
+          : this.contentHash,
+      vector: data.vector.present ? data.vector.value : this.vector,
+      embeddedAt: data.embeddedAt.present
+          ? data.embeddedAt.value
+          : this.embeddedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MemoEmbeddingsRow(')
+          ..write('accountId: $accountId, ')
+          ..write('memoUid: $memoUid, ')
+          ..write('model: $model, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('vector: $vector, ')
+          ..write('embeddedAt: $embeddedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    accountId,
+    memoUid,
+    model,
+    contentHash,
+    $driftBlobEquality.hash(vector),
+    embeddedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MemoEmbeddingsRow &&
+          other.accountId == this.accountId &&
+          other.memoUid == this.memoUid &&
+          other.model == this.model &&
+          other.contentHash == this.contentHash &&
+          $driftBlobEquality.equals(other.vector, this.vector) &&
+          other.embeddedAt == this.embeddedAt);
+}
+
+class MemoEmbeddingsCompanion extends UpdateCompanion<MemoEmbeddingsRow> {
+  final Value<String> accountId;
+  final Value<String> memoUid;
+  final Value<String> model;
+  final Value<int> contentHash;
+  final Value<Uint8List> vector;
+  final Value<DateTime> embeddedAt;
+  final Value<int> rowid;
+  const MemoEmbeddingsCompanion({
+    this.accountId = const Value.absent(),
+    this.memoUid = const Value.absent(),
+    this.model = const Value.absent(),
+    this.contentHash = const Value.absent(),
+    this.vector = const Value.absent(),
+    this.embeddedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MemoEmbeddingsCompanion.insert({
+    required String accountId,
+    required String memoUid,
+    required String model,
+    required int contentHash,
+    required Uint8List vector,
+    required DateTime embeddedAt,
+    this.rowid = const Value.absent(),
+  }) : accountId = Value(accountId),
+       memoUid = Value(memoUid),
+       model = Value(model),
+       contentHash = Value(contentHash),
+       vector = Value(vector),
+       embeddedAt = Value(embeddedAt);
+  static Insertable<MemoEmbeddingsRow> custom({
+    Expression<String>? accountId,
+    Expression<String>? memoUid,
+    Expression<String>? model,
+    Expression<int>? contentHash,
+    Expression<Uint8List>? vector,
+    Expression<DateTime>? embeddedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (accountId != null) 'account_id': accountId,
+      if (memoUid != null) 'memo_uid': memoUid,
+      if (model != null) 'model': model,
+      if (contentHash != null) 'content_hash': contentHash,
+      if (vector != null) 'vector': vector,
+      if (embeddedAt != null) 'embedded_at': embeddedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MemoEmbeddingsCompanion copyWith({
+    Value<String>? accountId,
+    Value<String>? memoUid,
+    Value<String>? model,
+    Value<int>? contentHash,
+    Value<Uint8List>? vector,
+    Value<DateTime>? embeddedAt,
+    Value<int>? rowid,
+  }) {
+    return MemoEmbeddingsCompanion(
+      accountId: accountId ?? this.accountId,
+      memoUid: memoUid ?? this.memoUid,
+      model: model ?? this.model,
+      contentHash: contentHash ?? this.contentHash,
+      vector: vector ?? this.vector,
+      embeddedAt: embeddedAt ?? this.embeddedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (accountId.present) {
+      map['account_id'] = Variable<String>(accountId.value);
+    }
+    if (memoUid.present) {
+      map['memo_uid'] = Variable<String>(memoUid.value);
+    }
+    if (model.present) {
+      map['model'] = Variable<String>(model.value);
+    }
+    if (contentHash.present) {
+      map['content_hash'] = Variable<int>(contentHash.value);
+    }
+    if (vector.present) {
+      map['vector'] = Variable<Uint8List>(vector.value);
+    }
+    if (embeddedAt.present) {
+      map['embedded_at'] = Variable<DateTime>(embeddedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MemoEmbeddingsCompanion(')
+          ..write('accountId: $accountId, ')
+          ..write('memoUid: $memoUid, ')
+          ..write('model: $model, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('vector: $vector, ')
+          ..write('embeddedAt: $embeddedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1787,6 +2212,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PendingAttachmentsTable pendingAttachments =
       $PendingAttachmentsTable(this);
   late final $SyncMetaTable syncMeta = $SyncMetaTable(this);
+  late final $MemoEmbeddingsTable memoEmbeddings = $MemoEmbeddingsTable(this);
   late final Index idxMemosList = Index(
     'idx_memos_list',
     'CREATE INDEX idx_memos_list ON memos (account_id, state, pinned, create_time)',
@@ -1795,7 +2221,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_memo_tags_tag',
     'CREATE INDEX idx_memo_tags_tag ON memo_tags (account_id, tag)',
   );
+  late final Index idxMemoEmbeddingsAccount = Index(
+    'idx_memo_embeddings_account',
+    'CREATE INDEX idx_memo_embeddings_account ON memo_embeddings (account_id, model)',
+  );
   late final MemoDao memoDao = MemoDao(this as AppDatabase);
+  late final EmbeddingDao embeddingDao = EmbeddingDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1805,8 +2236,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     memoTags,
     pendingAttachments,
     syncMeta,
+    memoEmbeddings,
     idxMemosList,
     idxMemoTagsTag,
+    idxMemoEmbeddingsAccount,
   ];
 }
 
@@ -2735,6 +3168,235 @@ typedef $$SyncMetaTableProcessedTableManager =
       SyncMetaRow,
       PrefetchHooks Function()
     >;
+typedef $$MemoEmbeddingsTableCreateCompanionBuilder =
+    MemoEmbeddingsCompanion Function({
+      required String accountId,
+      required String memoUid,
+      required String model,
+      required int contentHash,
+      required Uint8List vector,
+      required DateTime embeddedAt,
+      Value<int> rowid,
+    });
+typedef $$MemoEmbeddingsTableUpdateCompanionBuilder =
+    MemoEmbeddingsCompanion Function({
+      Value<String> accountId,
+      Value<String> memoUid,
+      Value<String> model,
+      Value<int> contentHash,
+      Value<Uint8List> vector,
+      Value<DateTime> embeddedAt,
+      Value<int> rowid,
+    });
+
+class $$MemoEmbeddingsTableFilterComposer
+    extends Composer<_$AppDatabase, $MemoEmbeddingsTable> {
+  $$MemoEmbeddingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get accountId => $composableBuilder(
+    column: $table.accountId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get memoUid => $composableBuilder(
+    column: $table.memoUid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get vector => $composableBuilder(
+    column: $table.vector,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get embeddedAt => $composableBuilder(
+    column: $table.embeddedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$MemoEmbeddingsTableOrderingComposer
+    extends Composer<_$AppDatabase, $MemoEmbeddingsTable> {
+  $$MemoEmbeddingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get accountId => $composableBuilder(
+    column: $table.accountId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get memoUid => $composableBuilder(
+    column: $table.memoUid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get vector => $composableBuilder(
+    column: $table.vector,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get embeddedAt => $composableBuilder(
+    column: $table.embeddedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MemoEmbeddingsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MemoEmbeddingsTable> {
+  $$MemoEmbeddingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get accountId =>
+      $composableBuilder(column: $table.accountId, builder: (column) => column);
+
+  GeneratedColumn<String> get memoUid =>
+      $composableBuilder(column: $table.memoUid, builder: (column) => column);
+
+  GeneratedColumn<String> get model =>
+      $composableBuilder(column: $table.model, builder: (column) => column);
+
+  GeneratedColumn<int> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<Uint8List> get vector =>
+      $composableBuilder(column: $table.vector, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get embeddedAt => $composableBuilder(
+    column: $table.embeddedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$MemoEmbeddingsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MemoEmbeddingsTable,
+          MemoEmbeddingsRow,
+          $$MemoEmbeddingsTableFilterComposer,
+          $$MemoEmbeddingsTableOrderingComposer,
+          $$MemoEmbeddingsTableAnnotationComposer,
+          $$MemoEmbeddingsTableCreateCompanionBuilder,
+          $$MemoEmbeddingsTableUpdateCompanionBuilder,
+          (
+            MemoEmbeddingsRow,
+            BaseReferences<
+              _$AppDatabase,
+              $MemoEmbeddingsTable,
+              MemoEmbeddingsRow
+            >,
+          ),
+          MemoEmbeddingsRow,
+          PrefetchHooks Function()
+        > {
+  $$MemoEmbeddingsTableTableManager(
+    _$AppDatabase db,
+    $MemoEmbeddingsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MemoEmbeddingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MemoEmbeddingsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MemoEmbeddingsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> accountId = const Value.absent(),
+                Value<String> memoUid = const Value.absent(),
+                Value<String> model = const Value.absent(),
+                Value<int> contentHash = const Value.absent(),
+                Value<Uint8List> vector = const Value.absent(),
+                Value<DateTime> embeddedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MemoEmbeddingsCompanion(
+                accountId: accountId,
+                memoUid: memoUid,
+                model: model,
+                contentHash: contentHash,
+                vector: vector,
+                embeddedAt: embeddedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String accountId,
+                required String memoUid,
+                required String model,
+                required int contentHash,
+                required Uint8List vector,
+                required DateTime embeddedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => MemoEmbeddingsCompanion.insert(
+                accountId: accountId,
+                memoUid: memoUid,
+                model: model,
+                contentHash: contentHash,
+                vector: vector,
+                embeddedAt: embeddedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MemoEmbeddingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MemoEmbeddingsTable,
+      MemoEmbeddingsRow,
+      $$MemoEmbeddingsTableFilterComposer,
+      $$MemoEmbeddingsTableOrderingComposer,
+      $$MemoEmbeddingsTableAnnotationComposer,
+      $$MemoEmbeddingsTableCreateCompanionBuilder,
+      $$MemoEmbeddingsTableUpdateCompanionBuilder,
+      (
+        MemoEmbeddingsRow,
+        BaseReferences<_$AppDatabase, $MemoEmbeddingsTable, MemoEmbeddingsRow>,
+      ),
+      MemoEmbeddingsRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2747,4 +3409,6 @@ class $AppDatabaseManager {
       $$PendingAttachmentsTableTableManager(_db, _db.pendingAttachments);
   $$SyncMetaTableTableManager get syncMeta =>
       $$SyncMetaTableTableManager(_db, _db.syncMeta);
+  $$MemoEmbeddingsTableTableManager get memoEmbeddings =>
+      $$MemoEmbeddingsTableTableManager(_db, _db.memoEmbeddings);
 }

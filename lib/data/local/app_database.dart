@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'embedding_dao.dart';
 import 'memo_dao.dart';
 
 part 'app_database.g.dart';
@@ -101,9 +102,27 @@ class SyncMeta extends Table {
   Set<Column> get primaryKey => {accountId};
 }
 
+/// Per-memo embedding vectors keyed by `(accountId, memoUid, model)`. One
+/// row per memo per model; stale-model rows are swept by the vectorization
+/// engine after a completed pass, and a `contentHash` mismatch triggers
+/// re-embedding.
+@DataClassName('MemoEmbeddingsRow')
+@TableIndex(name: 'idx_memo_embeddings_account', columns: {#accountId, #model})
+class MemoEmbeddings extends Table {
+  TextColumn get accountId => text()();
+  TextColumn get memoUid => text()();
+  TextColumn get model => text()();
+  IntColumn get contentHash => integer()();
+  BlobColumn get vector => blob()();
+  DateTimeColumn get embeddedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {accountId, memoUid, model};
+}
+
 @DriftDatabase(
-  tables: [Memos, MemoTags, PendingAttachments, SyncMeta],
-  daos: [MemoDao],
+  tables: [Memos, MemoTags, PendingAttachments, SyncMeta, MemoEmbeddings],
+  daos: [MemoDao, EmbeddingDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
@@ -115,13 +134,20 @@ class AppDatabase extends _$AppDatabase {
       : super(DatabaseConnection(e, closeStreamsSynchronously: true));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
-          // Future schema versions migrate here.
+          if (from < 2) {
+            await m.createTable(memoEmbeddings);
+            // drift's Migrator has no customStatement; the database's own
+            // method is the same call. SQL kept idempotent for upgrades.
+            await customStatement(
+                'CREATE INDEX IF NOT EXISTS idx_memo_embeddings_account '
+                'ON memo_embeddings (account_id, model)');
+          }
         },
       );
 

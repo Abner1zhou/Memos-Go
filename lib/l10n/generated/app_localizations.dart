@@ -884,6 +884,204 @@ abstract class AppLocalizations {
   /// **'去设置'**
   String get asrGoSettings;
 
+  /// No description provided for @llmSettingsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 助手'**
+  String get llmSettingsTitle;
+
+  /// No description provided for @llmSettingsSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'配置 OpenAI 兼容的大模型接口，用于回顾页 AI 摘要等功能；支持 DeepSeek、Qwen、SiliconFlow、OpenRouter、Ollama 等'**
+  String get llmSettingsSubtitle;
+
+  /// No description provided for @llmBaseUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'接口地址'**
+  String get llmBaseUrl;
+
+  /// No description provided for @llmBaseUrlHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'https://api.deepseek.com/v1'**
+  String get llmBaseUrlHint;
+
+  /// No description provided for @llmApiKey.
+  ///
+  /// In zh, this message translates to:
+  /// **'API Key'**
+  String get llmApiKey;
+
+  /// No description provided for @llmChatModel.
+  ///
+  /// In zh, this message translates to:
+  /// **'对话模型'**
+  String get llmChatModel;
+
+  /// No description provided for @llmChatModelHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'deepseek-chat'**
+  String get llmChatModelHint;
+
+  /// No description provided for @llmEmbeddingModel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Embedding 模型（可选）'**
+  String get llmEmbeddingModel;
+
+  /// No description provided for @llmEmbeddingModelHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'text-embedding-3-small，留空则跳过向量相关功能'**
+  String get llmEmbeddingModelHint;
+
+  /// No description provided for @llmTest.
+  ///
+  /// In zh, this message translates to:
+  /// **'测试连接'**
+  String get llmTest;
+
+  /// No description provided for @llmTestOk.
+  ///
+  /// In zh, this message translates to:
+  /// **'对话接口连接成功'**
+  String get llmTestOk;
+
+  /// No description provided for @llmEmbeddingsTestOk.
+  ///
+  /// In zh, this message translates to:
+  /// **'向量接口连接成功'**
+  String get llmEmbeddingsTestOk;
+
+  /// No description provided for @llmTestFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'接口测试失败'**
+  String get llmTestFailed;
+
+  /// No description provided for @llmInvalidBaseUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'接口地址无效，需以 http(s):// 开头'**
+  String get llmInvalidBaseUrl;
+
+  /// No description provided for @llmClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除配置'**
+  String get llmClear;
+
+  /// No description provided for @llmClearConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除 AI 助手配置？'**
+  String get llmClearConfirm;
+
+  /// No description provided for @digestTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 摘要'**
+  String get digestTitle;
+
+  /// No description provided for @digestGenerate.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成 AI 摘要'**
+  String get digestGenerate;
+
+  /// No description provided for @digestRegenerate.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新生成'**
+  String get digestRegenerate;
+
+  /// No description provided for @digestGoConfig.
+  ///
+  /// In zh, this message translates to:
+  /// **'配置 AI 助手'**
+  String get digestGoConfig;
+
+  /// No description provided for @digestNotConfigured.
+  ///
+  /// In zh, this message translates to:
+  /// **'配置大模型接口后，可生成今日摘要与记忆呼应'**
+  String get digestNotConfigured;
+
+  /// No description provided for @digestFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成失败'**
+  String get digestFailed;
+
+  /// No description provided for @llmErrTimeout.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接超时，请检查网络或代理'**
+  String get llmErrTimeout;
+
+  /// No description provided for @llmErrUnreachable.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法连接到接口服务器'**
+  String get llmErrUnreachable;
+
+  /// No description provided for @llmErrAuth.
+  ///
+  /// In zh, this message translates to:
+  /// **'认证失败，请检查 API Key'**
+  String get llmErrAuth;
+
+  /// No description provided for @vecSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'语义搜索'**
+  String get vecSection;
+
+  /// No description provided for @vecPrivacyNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'向量化会将笔记内容发送到你配置的 embedding 端点，向量仅保存在本机。'**
+  String get vecPrivacyNote;
+
+  /// No description provided for @vecProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'已向量化 {done}/{total} 条'**
+  String vecProgress(Object done, Object total);
+
+  /// No description provided for @vecPause.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂停'**
+  String get vecPause;
+
+  /// No description provided for @vecResume.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续'**
+  String get vecResume;
+
+  /// No description provided for @vecClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除全部向量'**
+  String get vecClear;
+
+  /// No description provided for @vecClearConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除已生成的全部向量？清除后向量化会暂停，点击“继续”才会重新开始。'**
+  String get vecClearConfirm;
+
+  /// No description provided for @searchSemantic.
+  ///
+  /// In zh, this message translates to:
+  /// **'语义相关'**
+  String get searchSemantic;
+
   /// No description provided for @voiceInput.
   ///
   /// In zh, this message translates to:
