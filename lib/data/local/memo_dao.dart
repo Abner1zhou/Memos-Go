@@ -288,6 +288,11 @@ class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
                   p.accountId.equals(accountId) & p.memoUid.equals(localUid)))
               .write(
                   PendingAttachmentsCompanion(memoUid: Value(serverMemo.uid)));
+          await (update(memoEmbeddings)
+                ..where((e) =>
+                    e.accountId.equals(accountId) &
+                    e.memoUid.equals(localUid)))
+              .write(MemoEmbeddingsCompanion(memoUid: Value(serverMemo.uid)));
         }
         await _upsertRowAndTags(accountId, serverMemo,
             syncedAt: now, attachmentsDirty: const Value(false));

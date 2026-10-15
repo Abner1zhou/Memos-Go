@@ -105,6 +105,9 @@ class VectorizationEngine {
 
       final corpus = await _dao.corpus(accountId);
       final hashes = await _dao.embeddedHashes(accountId, model);
+      // A pause/clear landing during the initial awaits must win over the
+      // running status this pass is about to publish.
+      if (_paused || generation != _generation) return;
       final pending = <EmbeddableMemo>[
         for (final m in corpus)
           if (hashes[m.uid] != stableHash(m.content)) m

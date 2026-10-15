@@ -59,6 +59,20 @@ class ThrowingLoadRepository extends FakeVectorRepository {
   Future<LlmSettings> load() async => throw Exception('keychain exploded');
 }
 
+/// load() stalls on [gate] so a test can interleave pause() with run()'s
+/// initial awaits.
+class _GatedLoadRepository extends FakeVectorRepository {
+  _GatedLoadRepository(super.settings);
+
+  final gate = Completer<void>();
+
+  @override
+  Future<LlmSettings> load() async {
+    await gate.future;
+    return settings;
+  }
+}
+
 const configured = LlmSettings(
   baseUrl: 'https://llm.example.com/v1',
   apiKey: 'sk-x',
@@ -221,5 +235,20 @@ void main() {
 
     expect(e.state.value.status, VectorStatus.error);
     expect(e.state.value.lastError, contains('keychain exploded'));
+  });
+
+  test('pause landing during initial awaits keeps status paused', () async {
+    await db.memoDao.upsertLocalMemo('acc-1', memo('a', 'x'));
+    final repo = _GatedLoadRepository(configured);
+    final engine = VectorizationEngine(
+        accountId: 'acc-1', db: db, repository: repo);
+    final done = engine.run();
+    await Future<void>.delayed(Duration.zero);
+    engine.pause();
+    repo.gate.complete();
+    await done;
+
+    expect(engine.state.value.status, VectorStatus.paused);
+    expect(repo.batches, isEmpty);
   });
 }

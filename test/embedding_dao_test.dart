@@ -157,4 +157,18 @@ void main() {
     await db.embeddingDao.deleteOrphans('acc-1');
     expect(await db.embeddingDao.embeddedHashes('acc-1', 'm'), isEmpty);
   });
+
+  test('markSyncedFromServer re-keys embedding rows', () async {
+    await db.memoDao.upsertLocalMemo('acc-1', memo('local-1', 'x'));
+    await db.embeddingDao.upsertAll('acc-1', 'm', [
+      EmbeddingWrite(
+          uid: 'local-1', contentHash: 1, vector: Float32List.fromList([1])),
+    ]);
+    await db.memoDao.markSyncedFromServer('acc-1',
+        localUid: 'local-1',
+        serverMemo: memo('server-9', 'x'));
+    expect(
+        (await db.embeddingDao.embeddedHashes('acc-1', 'm')).keys,
+        ['server-9']);
+  });
 }
