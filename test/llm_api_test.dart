@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
@@ -271,5 +274,80 @@ void main() {
       throwsA(isA<LlmApiException>()
           .having((e) => e.kind, 'kind', LlmErrorKind.auth)),
     );
+  });
+
+  test('parseChatDeltas joins SSE deltas and stops at DONE', () async {
+    final bytes = Stream.fromIterable([
+      utf8.encode('data: {"choices":[{"delta":{"content":"你"}}]}\n\n'),
+      utf8.encode('data: {"choices":[{"delta":{"content":"好，世界"}}]}\n\n'),
+      utf8.encode('data: [DONE]\n\n'),
+      utf8.encode('data: {"choices":[{"delta":{"content":"不应出现"}}]}\n\n'),
+    ]);
+    expect(await parseChatDeltas(bytes).join(), '你好，世界');
+  });
+
+  test('parseChatDeltas survives multi-byte chars split across chunks',
+      () async {
+    // 部 is a three-byte UTF-8 sequence; the split lands between its bytes
+    // (the `content":"` prefix is 39 bytes), so the streaming decoder has to
+    // carry the partial sequence across the chunk boundary.
+    final raw = utf8.encode(
+        'data: {"choices":[{"delta":{"content":"部署了"}}]}\n\n'
+        'data: [DONE]\n\n');
+    final bytes = Stream.fromIterable([
+      raw.sublist(0, 40), // ends mid-部 (0xE9 0x83 | 0xA8 …)
+      raw.sublist(40),
+    ]);
+    expect(await parseChatDeltas(bytes).join(), '部署了');
+  });
+
+  test('parseChatDeltas skips malformed payloads and non-content events',
+      () async {
+    final bytes = Stream.fromIterable([
+      utf8.encode(': keep-alive comment\n\n'),
+      utf8.encode('data: not json\n\n'),
+      utf8.encode('data: {"choices":[]}\n\n'),
+      utf8.encode('data: {"choices":[{"delta":{"role":"assistant"}}]}\n\n'),
+      utf8.encode('data: {"choices":[{"delta":{"content":"ok"}}]}\n\n'),
+      utf8.encode('data: [DONE]\n\n'),
+    ]);
+    expect(await parseChatDeltas(bytes).join(), 'ok');
+  });
+
+  test('extractSseDataLines trims the data prefix', () async {
+    final bytes = Stream.fromIterable(
+        [utf8.encode('data: a\n\ndata:b\n\nx\n')]);
+    expect(await extractSseDataLines(bytes).toList(), ['a', 'b']);
+  });
+
+  test('chatStream posts stream:true and yields deltas', () async {
+    // http_mock_adapter jsonEncodes non-Uint8List reply data under its
+    // default JSON content-type, which would mangle a raw SSE body (no real
+    // newlines). Passing the body as bytes hits MockResponseBody.fromBytes
+    // and preserves the stream verbatim.
+    final sseBody = utf8.encode(
+        'data: {"choices":[{"delta":{"content":"你好"}}]}\n\n'
+        'data: [DONE]\n\n');
+    adapter.onPost(
+      '/chat/completions',
+      (server) => server.reply(200, Uint8List.fromList(sseBody)),
+      data: {
+        'model': 'deepseek-chat',
+        'messages': [
+          {'role': 'user', 'content': 'hi'}
+        ],
+        'max_tokens': 64,
+        'stream': true,
+      },
+      headers: {'Authorization': 'Bearer sk-x'},
+    );
+
+    final text = await api
+        .chatStream(
+            model: 'deepseek-chat',
+            messages: const [LlmChatMessage(role: 'user', content: 'hi')],
+            maxTokens: 64)
+        .join();
+    expect(text, '你好');
   });
 }

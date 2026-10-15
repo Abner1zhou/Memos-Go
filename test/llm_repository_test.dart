@@ -1,5 +1,6 @@
 import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:memos_go/data/api/llm_api.dart';
 import 'package:memos_go/data/repositories/llm_repository.dart';
 
 import 'fake_secure_storage.dart';
@@ -88,5 +89,17 @@ void main() {
         baseUrl: 'https://x', apiKey: 'k', chatModel: 'm');
     expect(base.copyWith(chatModel: 'm2').chatModel, 'm2');
     expect(base.copyWith(chatModel: 'm2').apiKey, 'k');
+  });
+
+  test('chatStream rejects on a non-2xx SSE response', () async {
+    // 结构性测试：仓库层把错误映射成 LlmApiException 后，
+    // chatStream 的 Stream 以 LlmApiException 报错。
+    final repo = LlmRepository();
+    final stream = repo.chatStream(
+      const LlmSettings(baseUrl: 'not a url', apiKey: '', chatModel: ''),
+      messages: const [],
+    );
+    await expectLater(
+        stream.drain<void>(), throwsA(isA<LlmApiException>()));
   });
 }
