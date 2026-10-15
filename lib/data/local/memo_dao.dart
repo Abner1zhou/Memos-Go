@@ -16,7 +16,7 @@ class MemoSlice {
 
 /// All local-database access for the memo mirror. Every query is scoped by
 /// [accountId] so multiple server accounts share one database file safely.
-@DriftAccessor(tables: [Memos, MemoTags, PendingAttachments, SyncMeta])
+@DriftAccessor(tables: [Memos, MemoTags, PendingAttachments, SyncMeta, MemoEmbeddings])
 class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
   MemoDao(super.db);
 
@@ -82,6 +82,25 @@ class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
       if (row == null) return null;
       return (await _withTags(accountId, [row])).single;
     });
+  }
+
+  /// Memos by uid in the given order; missing uids are skipped. Used by
+  /// semantic search to materialize similarity-ranked hits.
+  Future<List<MemoRecord>> recordsByUids(
+      String accountId, List<String> uids) async {
+    if (uids.isEmpty) return const [];
+    final query = select(memos)
+      ..where((r) =>
+          r.accountId.equals(accountId) & r.uid.isIn(uids));
+    final rows = await query.get();
+    final byUid = {
+      for (final record in await _withTags(accountId, rows))
+        record.memo.uid: record,
+    };
+    return [
+      for (final uid in uids)
+        if (byUid[uid] != null) byUid[uid]!,
+    ];
   }
 
   /// Watches every normal memo for local aggregation (insights, tags).
@@ -299,6 +318,12 @@ class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
         await (delete(memoTags)..where((t) =>
                 t.accountId.equals(accountId) &
                 t.memoUid.isNotInQuery(remaining))).go();
+        final remainingEmbeddings = selectOnly(memos)
+          ..addColumns([memos.uid])
+          ..where(memos.accountId.equals(accountId));
+        await (delete(memoEmbeddings)..where((e) =>
+                e.accountId.equals(accountId) &
+                e.memoUid.isNotInQuery(remainingEmbeddings))).go();
       });
 
   /// Removes all local data of an account (called on account removal).
@@ -311,6 +336,9 @@ class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
               ..where((p) => p.accountId.equals(accountId)))
             .go();
         await (delete(syncMeta)..where((m) => m.accountId.equals(accountId)))
+            .go();
+        await (delete(memoEmbeddings)
+              ..where((e) => e.accountId.equals(accountId)))
             .go();
       });
 
@@ -329,6 +357,10 @@ class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
         await (delete(pendingAttachments)
               ..where((p) =>
                   p.accountId.equals(accountId) & p.memoUid.equals(uid)))
+            .go();
+        await (delete(memoEmbeddings)
+              ..where((e) =>
+                  e.accountId.equals(accountId) & e.memoUid.equals(uid)))
             .go();
       });
 
