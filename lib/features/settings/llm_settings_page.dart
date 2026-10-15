@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/utils/llm_errors.dart';
 import '../../data/api/llm_api.dart';
+import '../../data/llm/vectorization_engine.dart';
 import '../../data/repositories/llm_repository.dart';
 import '../../providers/llm_providers.dart';
+import '../../providers/vectorization_providers.dart';
 
 /// Configures an OpenAI-compatible LLM endpoint (chat + embeddings) for AI
 /// features like the daily review digest.
@@ -145,11 +147,35 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
     });
   }
 
+  Future<void> _clearVectors(
+      BuildContext context, VectorizationEngine? engine) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        content: Text(l10n.vecClearConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(l10n.confirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await engine?.clearVectors();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final configured = ref.watch(llmProvider).isConfigured;
+    final engine = ref.watch(vectorizationEngineProvider);
+    final vec = ref.watch(vectorizationStateProvider).value;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.llmSettingsTitle)),
@@ -232,6 +258,41 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
               child: Text(l10n.llmClear,
                   style: TextStyle(color: theme.colorScheme.error)),
             ),
+          ],
+          if (ref.watch(llmProvider).embeddingsConfigured) ...[
+            const Divider(height: 32),
+            Text(l10n.vecSection,
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(color: theme.colorScheme.primary)),
+            const SizedBox(height: 4),
+            Text(
+              l10n.vecPrivacyNote,
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 8),
+            if (vec != null && vec.total > 0) ...[
+              LinearProgressIndicator(value: vec.fraction),
+              const SizedBox(height: 4),
+              Text(l10n.vecProgress(vec.embedded, vec.total),
+                  style: theme.textTheme.bodySmall),
+            ],
+            const SizedBox(height: 4),
+            Row(children: [
+              TextButton(
+                onPressed: () => vec?.status == VectorStatus.paused
+                    ? engine?.resume()
+                    : engine?.pause(),
+                child: Text(vec?.status == VectorStatus.paused
+                    ? l10n.vecResume
+                    : l10n.vecPause),
+              ),
+              TextButton(
+                onPressed: () => _clearVectors(context, engine),
+                child: Text(l10n.vecClear,
+                    style: TextStyle(color: theme.colorScheme.error)),
+              ),
+            ]),
           ],
         ],
       ),

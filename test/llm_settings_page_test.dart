@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:memos_go/features/settings/llm_settings_page.dart';
 import 'package:memos_go/l10n/generated/app_localizations.dart';
 import 'package:memos_go/providers/llm_providers.dart';
+import 'package:memos_go/providers/vectorization_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'fake_secure_storage.dart';
@@ -18,7 +19,12 @@ void main() {
     storage = FakeSecureStorage();
     FlutterSecureStoragePlatform.instance = storage;
     SharedPreferences.setMockInitialValues({});
-    container = ProviderContainer();
+    // The real engine starts a debounce Timer on construction, which the
+    // test binding forbids; the semantic-section test only exercises the
+    // settings-driven UI, so no engine at all.
+    container = ProviderContainer(overrides: [
+      vectorizationEngineProvider.overrideWithValue(null),
+    ]);
   });
 
   tearDown(() {
@@ -127,5 +133,29 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(container.read(llmProvider).isConfigured, isFalse);
+  });
+
+  testWidgets('semantic section shows progress and privacy note once an '
+      'embedding model is saved', (tester) async {
+    await pumpPage(tester);
+
+    // Semantic controls stay hidden until an embedding model exists.
+    expect(find.text('语义搜索'), findsNothing);
+
+    await tester.enterText(
+        find.byType(TextFormField).at(0), 'https://api.deepseek.com/v1');
+    await tester.enterText(find.byType(TextFormField).at(1), 'sk-secret');
+    await tester.enterText(
+        find.byType(TextFormField).at(2), 'deepseek-chat');
+    await tester.enterText(
+        find.byType(TextFormField).at(3), 'text-embedding-3-small');
+    await tester.pump();
+
+    await tester.tap(find.byType(FilledButton));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('语义搜索'), findsOneWidget);
+    expect(find.textContaining('向量化会将笔记内容发送'), findsOneWidget);
   });
 }

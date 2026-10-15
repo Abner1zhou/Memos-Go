@@ -123,6 +123,16 @@ class EmbeddingDao extends DatabaseAccessor<AppDatabase>
         .go();
   }
 
+  /// Drops vectors of every model except [keepModel] — called after a
+  /// completed pass so switching the embedding model doesn't leave the
+  /// previous model's rows as dead weight (3-column PK keeps them).
+  Future<void> deleteOtherModels(String accountId, String keepModel) =>
+      (delete(memoEmbeddings)
+            ..where((e) =>
+                e.accountId.equals(accountId) &
+                e.model.equals(keepModel).not()))
+          .go();
+
   Future<void> deleteAllForAccount(String accountId) =>
       (delete(memoEmbeddings)
             ..where((e) => e.accountId.equals(accountId)))

@@ -63,7 +63,8 @@ void main() {
     expect(vectors.map((v) => v.uid), ['a', 'b']);
     expect(vectors.first.bytes.lengthInBytes, 8);
 
-    // Upserting the same uid replaces the row (PK is (accountId, memoUid)).
+    // Upserting the same uid replaces the row (PK is (accountId, memoUid,
+    // model)).
     await db.embeddingDao.upsertAll('acc-1', 'e-model', [
       EmbeddingWrite(
           uid: 'a',
