@@ -515,7 +515,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get vecClear => '清除全部向量';
 
   @override
-  String get vecClearConfirm => '清除已生成的全部向量？它们不会自动重新生成，直到下一次内容变更或设置保存。';
+  String get vecClearConfirm => '清除已生成的全部向量？清除后向量化会暂停，点击“继续”才会重新开始。';
 
   @override
   String get searchSemantic => '语义相关';

@@ -205,7 +205,7 @@
   "vecPause": "暂停",
   "vecResume": "继续",
   "vecClear": "清除全部向量",
-  "vecClearConfirm": "清除已生成的全部向量？它们不会自动重新生成，直到下一次内容变更或设置保存。",
+  "vecClearConfirm": "清除已生成的全部向量？清除后向量化会暂停，点击“继续”才会重新开始。",
   "searchSemantic": "语义相关",
   "voiceInput": "语音输入",
   "recording": "录音中…",

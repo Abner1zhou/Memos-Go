@@ -529,7 +529,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get vecClearConfirm =>
-      'Clear all generated vectors? They will not regenerate until the next content change or settings save.';
+      'Clear all generated vectors? Indexing pauses after clearing and only restarts when you tap Resume.';
 
   @override
   String get searchSemantic => 'Semantically related';

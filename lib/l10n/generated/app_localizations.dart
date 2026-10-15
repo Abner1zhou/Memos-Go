@@ -1073,7 +1073,7 @@ abstract class AppLocalizations {
   /// No description provided for @vecClearConfirm.
   ///
   /// In zh, this message translates to:
-  /// **'清除已生成的全部向量？它们不会自动重新生成，直到下一次内容变更或设置保存。'**
+  /// **'清除已生成的全部向量？清除后向量化会暂停，点击“继续”才会重新开始。'**
   String get vecClearConfirm;
 
   /// No description provided for @searchSemantic.

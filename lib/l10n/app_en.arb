@@ -205,7 +205,7 @@
   "vecPause": "Pause",
   "vecResume": "Resume",
   "vecClear": "Clear all vectors",
-  "vecClearConfirm": "Clear all generated vectors? They will not regenerate until the next content change or settings save.",
+  "vecClearConfirm": "Clear all generated vectors? Indexing pauses after clearing and only restarts when you tap Resume.",
   "searchSemantic": "Semantically related",
   "voiceInput": "Voice input",
   "recording": "Recording…",
