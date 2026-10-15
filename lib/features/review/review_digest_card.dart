@@ -7,6 +7,7 @@ import '../../core/widgets/memo_markdown.dart';
 import '../../data/api/llm_api.dart';
 import '../../data/models/models.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../providers/auth_providers.dart';
 import '../../providers/llm_providers.dart';
 import 'review_digest.dart';
 
@@ -57,7 +58,8 @@ class _ReviewDigestCardState extends ConsumerState<ReviewDigestCard> {
     final settings = await ref.read(llmRepositoryProvider).load();
     if (!mounted) return;
     if (!settings.isConfigured) return;
-    final cached = await ReviewDigestCache().load(_dayKey(DateTime.now()));
+    final accountId = ref.read(authProvider).activeAccount?.id ?? '';
+    final cached = await ReviewDigestCache().load(accountId, _dayKey(DateTime.now()));
     if (!mounted) return;
     if (_phase != _Phase.idle) return; // a generate started meanwhile
     if (cached != null && cached.fingerprint == _input.fingerprint()) {
@@ -104,7 +106,9 @@ class _ReviewDigestCardState extends ConsumerState<ReviewDigestCard> {
     // The chat call already succeeded (and was billed): a cache-write
     // failure must not flip the card into an error / re-billing retry.
     try {
+      final accountId = ref.read(authProvider).activeAccount?.id ?? '';
       await ReviewDigestCache().save(
+        accountId,
         _dayKey(now),
         ReviewDigestEntry(
           content: content,

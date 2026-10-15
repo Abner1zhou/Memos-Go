@@ -2,6 +2,7 @@ import 'dart:convert' as convert;
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/utils/stable_hash.dart';
 import '../../data/models/models.dart';
 
 /// Token guardrails: each memo is clipped and each group capped before the
@@ -24,7 +25,7 @@ class ReviewDigestInput {
   String fingerprint() {
     final parts = <String>[];
     void add(Memo m) => parts.add(
-        '${m.name}:${m.updateTime?.millisecondsSinceEpoch ?? m.createTime?.millisecondsSinceEpoch ?? 0}');
+        '${m.name}:${stableHash(m.content)}:${m.updateTime?.millisecondsSinceEpoch ?? m.createTime?.millisecondsSinceEpoch ?? 0}');
     for (final m in today) {
       add(m);
     }
@@ -120,14 +121,18 @@ class ReviewDigestEntry {
       );
 }
 
-/// Daily digest cache in shared preferences, one key per local day; only the
-/// newest 7 day keys are kept so the cache cannot grow unboundedly.
+/// Daily digest cache in shared preferences, one key per account + local
+/// day; only the newest 7 day keys of the active account are kept so the
+/// cache cannot grow unboundedly (corpus is accountId-isolated by design).
 class ReviewDigestCache {
   static const _prefix = 'memos_go.reviewDigest.';
 
-  Future<ReviewDigestEntry?> load(String dayKey) async {
+  String _key(String accountId, String dayKey) =>
+      '$_prefix$accountId.$dayKey';
+
+  Future<ReviewDigestEntry?> load(String accountId, String dayKey) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString('$_prefix$dayKey');
+    final raw = prefs.getString(_key(accountId, dayKey));
     if (raw == null) return null;
     try {
       final json = convert.jsonDecode(raw);
@@ -140,11 +145,12 @@ class ReviewDigestCache {
     return null;
   }
 
-  Future<void> save(String dayKey, ReviewDigestEntry entry) async {
+  Future<void> save(String accountId, String dayKey, ReviewDigestEntry entry) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-        '$_prefix$dayKey', convert.jsonEncode(entry.toJson()));
-    final keys = prefs.getKeys().where((k) => k.startsWith(_prefix)).toList()
+        _key(accountId, dayKey), convert.jsonEncode(entry.toJson()));
+    final accountPrefix = '$_prefix$accountId.';
+    final keys = prefs.getKeys().where((k) => k.startsWith(accountPrefix)).toList()
       ..sort();
     while (keys.length > 7) {
       await prefs.remove(keys.removeAt(0));

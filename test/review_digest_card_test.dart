@@ -8,10 +8,21 @@ import 'package:memos_go/data/repositories/llm_repository.dart';
 import 'package:memos_go/features/review/review_digest.dart';
 import 'package:memos_go/features/review/review_digest_card.dart';
 import 'package:memos_go/l10n/generated/app_localizations.dart';
+import 'package:memos_go/providers/auth_providers.dart';
 import 'package:memos_go/providers/llm_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'fake_secure_storage.dart';
+import 'helpers/offline_app.dart' show testAccount;
+
+class _StubAuthNotifier extends AuthNotifier {
+  @override
+  AuthState build() => AuthState(
+        status: AuthStatus.signedIn,
+        accounts: [testAccount],
+        activeAccount: testAccount,
+      );
+}
 
 /// Stands in for [LlmRepository] so no network is touched; records prompts.
 class FakeLlmRepository extends LlmRepository {
@@ -50,6 +61,7 @@ Future<void> pumpCard(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        authProvider.overrideWith(_StubAuthNotifier.new),
         llmRepositoryProvider.overrideWith((ref) => repo),
       ],
       child: MaterialApp(
@@ -135,14 +147,16 @@ void main() {
     final created = DateTime(2026, 10, 14, 9);
     final today = [_memo('memos/a', '缓存命中测试', created)];
     final fp = ReviewDigestInput(today: today, onThisDay: const {}).fingerprint();
-    // The card caches per *local* day, so seed today's key from the clock.
+    // The card caches per *local* day and per account, so seed today's key
+    // from the clock.
     final now = DateTime.now();
     final dayKey =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final accountId = testAccount.id;
     SharedPreferences.setMockInitialValues({
-      'memos_go.reviewDigest.$dayKey':
+      'memos_go.reviewDigest.$accountId.$dayKey':
           '{"content":"## 今日要点\\n- 来自缓存","fingerprint":"$fp",'
-          '"generatedAt":"${now.toIso8601String()}"}',
+          '"generatedAt":"2026-10-14T21:00:00.000"}',
     });
     final repo = FakeLlmRepository('unused');
 
