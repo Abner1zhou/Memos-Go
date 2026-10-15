@@ -70,7 +70,8 @@ class EmbeddingDao extends DatabaseAccessor<AppDatabase>
     };
   }
 
-  /// Inserts or replaces the given vectors (PK `(accountId, memoUid)`).
+  /// Inserts or replaces the given vectors (PK
+  /// `(accountId, memoUid, model)`).
   Future<void> upsertAll(
       String accountId, String model, List<EmbeddingWrite> rows) {
     final now = DateTime.now();

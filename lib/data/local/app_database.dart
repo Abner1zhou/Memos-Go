@@ -102,9 +102,10 @@ class SyncMeta extends Table {
   Set<Column> get primaryKey => {accountId};
 }
 
-/// Per-memo embedding vectors keyed by `(accountId, memoUid)`. One row per
-/// memo per active model — switching the embedding model rewrites rows
-/// with the new `model` and `contentHash` mismatch triggers re-embedding.
+/// Per-memo embedding vectors keyed by `(accountId, memoUid, model)`. One
+/// row per memo per active model — switching the embedding model rewrites
+/// rows with the new `model` and `contentHash` mismatch triggers
+/// re-embedding.
 @DataClassName('MemoEmbeddingsRow')
 @TableIndex(name: 'idx_memo_embeddings_account', columns: {#accountId, #model})
 class MemoEmbeddings extends Table {
