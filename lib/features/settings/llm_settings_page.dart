@@ -3,6 +3,7 @@ import '../../l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/utils/llm_errors.dart';
 import '../../data/api/llm_api.dart';
 import '../../data/repositories/llm_repository.dart';
 import '../../providers/llm_providers.dart';
@@ -98,9 +99,9 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
           ..showSnackBar(SnackBar(content: Text(l10n.llmEmbeddingsTestOk)));
       }
     } on LlmApiException catch (e) {
-      setState(() => _error = '${l10n.llmTestFailed}: ${e.message}');
+      setState(() => _error = '${l10n.llmTestFailed}: ${llmErrorMessage(l10n, e)}');
     } catch (e) {
-      setState(() => _error = '${l10n.llmTestFailed}: $e');
+      setState(() => _error = '${l10n.llmTestFailed}: ${llmErrorMessage(l10n, e)}');
     } finally {
       if (mounted) setState(() => _busy = false);
     }

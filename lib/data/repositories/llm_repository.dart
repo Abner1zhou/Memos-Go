@@ -1,5 +1,6 @@
 import 'dart:convert' as convert;
 
+import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../api/llm_api.dart';
@@ -72,6 +73,20 @@ class LlmRepository {
 
   final FlutterSecureStorage _storage;
 
+  Dio? _dio;
+  (String, String)? _dioKey;
+
+  /// Reuses one Dio per (baseUrl, apiKey); rebuilt only when the endpoint
+  /// config changes so P2's batch embedding loops keep connections warm.
+  Dio _dioFor(LlmSettings settings) {
+    final key = (normalizeLlmBaseUrl(settings.baseUrl), settings.apiKey);
+    if (_dio == null || _dioKey != key) {
+      _dio = createLlmDio(baseUrl: key.$1, apiKey: key.$2);
+      _dioKey = key;
+    }
+    return _dio!;
+  }
+
   /// Loads the saved settings; corrupt or missing data yields defaults.
   Future<LlmSettings> load() async {
     final raw = await _storage.read(key: _storageKey);
@@ -97,10 +112,7 @@ class LlmRepository {
     required List<LlmChatMessage> messages,
     int? maxTokens,
   }) {
-    final dio = createLlmDio(
-      baseUrl: normalizeLlmBaseUrl(settings.baseUrl),
-      apiKey: settings.apiKey,
-    );
+    final dio = _dioFor(settings);
     return LlmApi(dio).chat(
       model: settings.chatModel.trim(),
       messages: messages,
@@ -112,10 +124,7 @@ class LlmRepository {
     LlmSettings settings, {
     required List<String> inputs,
   }) {
-    final dio = createLlmDio(
-      baseUrl: normalizeLlmBaseUrl(settings.baseUrl),
-      apiKey: settings.apiKey,
-    );
+    final dio = _dioFor(settings);
     return LlmApi(dio).embeddings(
       model: settings.embeddingModel.trim(),
       inputs: inputs,

@@ -206,4 +206,70 @@ void main() {
     );
     expect(asLlmApiError(StateError('x')), isNull);
   });
+
+  test('embeddings aligns vectors to inputs by index', () async {
+    adapter.onPost(
+      '/embeddings',
+      (server) => server.reply(200, {
+        'data': [
+          {'index': 1, 'embedding': [0.4, 0.5]},
+          {'index': 0, 'embedding': [0.1, 0.2, 0.3]},
+        ],
+      }),
+      data: Matchers.isA<Map>(),
+    );
+
+    final vectors = await api.embeddings(model: 'm', inputs: ['a', 'b']);
+    expect(vectors, [
+      [0.1, 0.2, 0.3],
+      [0.4, 0.5],
+    ]);
+  });
+
+  test('embeddings skips malformed items and missing index falls back to order',
+      () async {
+    adapter.onPost(
+      '/embeddings',
+      (server) => server.reply(200, {
+        'data': [
+          {'embedding': 'not-a-list'},
+          {'embedding': [0.7]},
+          'garbage',
+        ],
+      }),
+      data: Matchers.isA<Map>(),
+    );
+
+    expect(await api.embeddings(model: 'm', inputs: ['a', 'b']), [
+      [0.7],
+    ]);
+  });
+
+  test('error kind reflects status and transport', () async {
+    adapter.onPost(
+      '/chat/completions',
+      (server) => server.throws(
+        401,
+        DioException(
+          requestOptions: RequestOptions(path: '/chat/completions'),
+          response: Response(
+            requestOptions: RequestOptions(path: '/chat/completions'),
+            statusCode: 401,
+            data: {
+              'error': {'message': 'bad key'}
+            },
+          ),
+        ),
+      ),
+      data: Matchers.isA<Map>(),
+    );
+
+    await expectLater(
+      api.chat(
+          model: 'm',
+          messages: const [LlmChatMessage(role: 'user', content: 'hi')]),
+      throwsA(isA<LlmApiException>()
+          .having((e) => e.kind, 'kind', LlmErrorKind.auth)),
+    );
+  });
 }

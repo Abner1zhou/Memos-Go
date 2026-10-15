@@ -497,6 +497,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get digestFailed => 'Generation failed';
 
   @override
+  String get llmErrTimeout =>
+      'Connection timed out; check your network or proxy';
+
+  @override
+  String get llmErrUnreachable => 'Cannot reach the endpoint server';
+
+  @override
+  String get llmErrAuth => 'Authentication failed; check the API key';
+
+  @override
+  String get vecSection => 'Semantic search';
+
+  @override
+  String get vecPrivacyNote =>
+      'Embedding sends memo content to your configured endpoint; vectors stay on this device only.';
+
+  @override
+  String vecProgress(Object done, Object total) {
+    return '$done/$total memos embedded';
+  }
+
+  @override
+  String get vecPause => 'Pause';
+
+  @override
+  String get vecResume => 'Resume';
+
+  @override
+  String get vecClear => 'Clear all vectors';
+
+  @override
+  String get vecClearConfirm =>
+      'Clear all generated vectors? They will not regenerate until the next content change or settings save.';
+
+  @override
+  String get searchSemantic => 'Semantically related';
+
+  @override
   String get voiceInput => 'Voice input';
 
   @override

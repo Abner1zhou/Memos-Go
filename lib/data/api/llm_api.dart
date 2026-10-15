@@ -1,15 +1,36 @@
 import 'package:dio/dio.dart';
 
+/// Coarse error class so UI can localize without parsing messages.
+enum LlmErrorKind { timeout, unreachable, auth, http, unknown }
+
 /// Typed error surfaced by the LLM layer so UI can show friendly messages.
 class LlmApiException implements Exception {
-  const LlmApiException(this.message, {this.statusCode, this.cause});
+  const LlmApiException(this.message,
+      {this.statusCode, this.cause, this.kind = LlmErrorKind.unknown});
 
   final String message;
   final int? statusCode;
   final Object? cause;
+  final LlmErrorKind kind;
 
   @override
   String toString() => 'LlmApiException($statusCode): $message';
+}
+
+/// Coarse class of a transport failure: timeouts, unreachable hosts and
+/// auth rejections get dedicated localized copy in the UI.
+LlmErrorKind _kindOf(DioException e) {
+  final status = e.response?.statusCode;
+  if (status == 401 || status == 403) return LlmErrorKind.auth;
+  if (status != null) return LlmErrorKind.http;
+  return switch (e.type) {
+    DioExceptionType.connectionTimeout ||
+    DioExceptionType.sendTimeout ||
+    DioExceptionType.receiveTimeout =>
+      LlmErrorKind.timeout,
+    DioExceptionType.connectionError => LlmErrorKind.unreachable,
+    _ => LlmErrorKind.unknown,
+  };
 }
 
 /// Normalizes a user-entered OpenAI-compatible endpoint: adds https:// when
@@ -52,6 +73,7 @@ Dio createLlmDio({required String baseUrl, required String apiKey}) {
           error: LlmApiException(
             _llmMessageOf(e),
             statusCode: e.response?.statusCode,
+            kind: _kindOf(e),
             cause: e,
           ),
           type: e.type,
@@ -150,7 +172,7 @@ class LlmApi {
     } on DioException catch (e) {
       final inner = e.error;
       if (inner is LlmApiException) throw inner;
-      throw LlmApiException(_llmMessageOf(e), cause: e);
+      throw LlmApiException(_llmMessageOf(e), cause: e, kind: _kindOf(e));
     }
   }
 
@@ -170,19 +192,29 @@ class LlmApi {
       final data = (res.data ?? const {}).cast<String, dynamic>();
       final list = data['data'];
       if (list is! List) return const [];
-      return list
-          .whereType<Map>()
-          .map((item) => (item['embedding'] as List? ?? const [])
-              .whereType<num>()
-              .map((n) => n.toDouble())
-              .toList())
-          .toList();
+      // OpenAI 兼容服务按 index 对齐向量与输入；缺 index 时退回出现顺序
+      // （ordinal），坏项（非 Map / 非 List embedding）直接跳过。
+      final entries = <(int, List<double>)>[];
+      var ordinal = 0;
+      for (final item in list) {
+        final order = ordinal++;
+        if (item is! Map) continue;
+        final raw = item['embedding'];
+        if (raw is! List) continue;
+        final index = item['index'];
+        entries.add((
+          index is int ? index : order,
+          raw.whereType<num>().map((n) => n.toDouble()).toList(),
+        ));
+      }
+      entries.sort((a, b) => a.$1.compareTo(b.$1));
+      return [for (final e in entries) e.$2];
     } on LlmApiException {
       rethrow;
     } on DioException catch (e) {
       final inner = e.error;
       if (inner is LlmApiException) throw inner;
-      throw LlmApiException(_llmMessageOf(e), cause: e);
+      throw LlmApiException(_llmMessageOf(e), cause: e, kind: _kindOf(e));
     }
   }
 }

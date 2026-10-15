@@ -486,6 +486,41 @@ class AppLocalizationsZh extends AppLocalizations {
   String get digestFailed => '生成失败';
 
   @override
+  String get llmErrTimeout => '连接超时，请检查网络或代理';
+
+  @override
+  String get llmErrUnreachable => '无法连接到接口服务器';
+
+  @override
+  String get llmErrAuth => '认证失败，请检查 API Key';
+
+  @override
+  String get vecSection => '语义搜索';
+
+  @override
+  String get vecPrivacyNote => '向量化会将笔记内容发送到你配置的 embedding 端点，向量仅保存在本机。';
+
+  @override
+  String vecProgress(Object done, Object total) {
+    return '已向量化 $done/$total 条';
+  }
+
+  @override
+  String get vecPause => '暂停';
+
+  @override
+  String get vecResume => '继续';
+
+  @override
+  String get vecClear => '清除全部向量';
+
+  @override
+  String get vecClearConfirm => '清除已生成的全部向量？它们不会自动重新生成，直到下一次内容变更或设置保存。';
+
+  @override
+  String get searchSemantic => '语义相关';
+
+  @override
   String get voiceInput => '语音输入';
 
   @override

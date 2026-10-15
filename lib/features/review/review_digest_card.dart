@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/utils/llm_errors.dart';
 import '../../core/widgets/memo_markdown.dart';
 import '../../data/api/llm_api.dart';
 import '../../data/models/models.dart';
@@ -94,10 +95,9 @@ class _ReviewDigestCardState extends ConsumerState<ReviewDigestCard> {
       );
     } catch (e) {
       if (!mounted) return;
-      final api = asLlmApiError(e);
       setState(() {
         _phase = _Phase.error;
-        _error = '${l10n.digestFailed}: ${api?.message ?? e}';
+        _error = '${l10n.digestFailed}: ${llmErrorMessage(l10n, e)}';
       });
       return;
     }

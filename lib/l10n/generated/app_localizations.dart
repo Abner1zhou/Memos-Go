@@ -1016,6 +1016,72 @@ abstract class AppLocalizations {
   /// **'生成失败'**
   String get digestFailed;
 
+  /// No description provided for @llmErrTimeout.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接超时，请检查网络或代理'**
+  String get llmErrTimeout;
+
+  /// No description provided for @llmErrUnreachable.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法连接到接口服务器'**
+  String get llmErrUnreachable;
+
+  /// No description provided for @llmErrAuth.
+  ///
+  /// In zh, this message translates to:
+  /// **'认证失败，请检查 API Key'**
+  String get llmErrAuth;
+
+  /// No description provided for @vecSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'语义搜索'**
+  String get vecSection;
+
+  /// No description provided for @vecPrivacyNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'向量化会将笔记内容发送到你配置的 embedding 端点，向量仅保存在本机。'**
+  String get vecPrivacyNote;
+
+  /// No description provided for @vecProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'已向量化 {done}/{total} 条'**
+  String vecProgress(Object done, Object total);
+
+  /// No description provided for @vecPause.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂停'**
+  String get vecPause;
+
+  /// No description provided for @vecResume.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续'**
+  String get vecResume;
+
+  /// No description provided for @vecClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除全部向量'**
+  String get vecClear;
+
+  /// No description provided for @vecClearConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除已生成的全部向量？它们不会自动重新生成，直到下一次内容变更或设置保存。'**
+  String get vecClearConfirm;
+
+  /// No description provided for @searchSemantic.
+  ///
+  /// In zh, this message translates to:
+  /// **'语义相关'**
+  String get searchSemantic;
+
   /// No description provided for @voiceInput.
   ///
   /// In zh, this message translates to:
