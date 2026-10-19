@@ -119,6 +119,10 @@ void main() {
     await tester.tap(find.byIcon(Icons.menu));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
+    // The /chat menu entry grew the drawer; scroll the tag row into view
+    // before tapping it.
+    await tester.ensureVisible(find.text('work'));
+    await tester.pump();
     await tester.tap(find.text('work'));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
@@ -207,7 +211,10 @@ void main() {
     expect(find.text('3'), findsWidgets);
     expect(find.text('deep'), findsNothing);
 
-    // Expand level2 -> deep appears.
+    // Expand level2 -> deep appears. The chat menu entry pushed the tree
+    // down, so bring the chevron on-screen before tapping it.
+    await tester.ensureVisible(treeChevrons.last);
+    await tester.pumpAndSettle();
     await tester.tap(treeChevrons.last);
     await tester.pumpAndSettle();
     expect(find.text('deep'), findsOneWidget);

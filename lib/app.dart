@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
+import 'features/chat/chat_page.dart';
 import 'features/login/login_page.dart';
 import 'features/memo_detail/memo_detail_page.dart';
 import 'features/memo_editor/memo_editor_page.dart';
@@ -121,6 +122,11 @@ List<RouteBase> buildAppRoutes() => [
         path: '/random',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const RandomWalkPage(),
+      ),
+      GoRoute(
+        path: '/chat',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ChatPage(),
       ),
     ];
 

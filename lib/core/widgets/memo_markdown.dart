@@ -13,11 +13,13 @@ class MemoMarkdown extends StatelessWidget {
     super.key,
     required this.content,
     this.onTagTap,
+    this.onCiteTap,
     this.selectable = false,
   });
 
   final String content;
   final ValueChanged<String>? onTagTap;
+  final ValueChanged<int>? onCiteTap;
   final bool selectable;
 
   static final RegExp _tagInCode = RegExp(r'```[\s\S]*?```|`[^`\n]*`');
@@ -41,11 +43,21 @@ class MemoMarkdown extends StatelessWidget {
     return out;
   }
 
+  /// Rewrites `[n]` citation markers into tappable links when the caller
+  /// cares about citations (chat answers); memo rendering is unchanged.
+  String _linkifyCites(String src) {
+    final onCite = onCiteTap;
+    if (onCite == null) return src;
+    return src.replaceAllMapped(RegExp(r'\[(\d{1,3})\]'), (m) {
+      return '[[${m[1]}]](#cite:${m[1]})';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return MarkdownBody(
-      data: _linkifyTags(content),
+      data: _linkifyCites(_linkifyTags(content)),
       selectable: selectable,
       shrinkWrap: true,
       extensionSet: md.ExtensionSet.gitHubWeb,
@@ -80,6 +92,10 @@ class MemoMarkdown extends StatelessWidget {
           // (CommonMark destination normalization), so a Chinese tag written
           // as `(#tag:中文)` arrives here as `#tag:%E4%B8%AD%E6%96%87`.
           onTagTap?.call(Uri.decodeComponent(href.substring(5)));
+          return;
+        }
+        if (href.startsWith('#cite:')) {
+          onCiteTap?.call(int.parse(Uri.decodeComponent(href.substring(6))));
           return;
         }
         debugPrint('open url: $href');

@@ -521,6 +521,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchSemantic => '语义相关';
 
   @override
+  String get chatEntry => 'AI 对话';
+
+  @override
+  String get chatTitle => '与记忆对话';
+
+  @override
+  String get chatNewSession => '新对话';
+
+  @override
+  String get chatHistory => '历史会话';
+
+  @override
+  String get chatInputHint => '问一句关于你笔记的问题…';
+
+  @override
+  String get chatEmpty => '向你的记忆提问，AI 会引用相关笔记作答';
+
+  @override
+  String get chatSources => '引用';
+
+  @override
+  String get chatDeleteSessionConfirm => '删除这个会话？';
+
+  @override
+  String get chatUnconfigured => '先配置 AI 助手（对话模型），即可与记忆对话';
+
+  @override
+  String get chatGoConfig => '去配置';
+
+  @override
   String get voiceInput => '语音输入';
 
   @override

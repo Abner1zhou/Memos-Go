@@ -1082,6 +1082,66 @@ abstract class AppLocalizations {
   /// **'语义相关'**
   String get searchSemantic;
 
+  /// No description provided for @chatEntry.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 对话'**
+  String get chatEntry;
+
+  /// No description provided for @chatTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'与记忆对话'**
+  String get chatTitle;
+
+  /// No description provided for @chatNewSession.
+  ///
+  /// In zh, this message translates to:
+  /// **'新对话'**
+  String get chatNewSession;
+
+  /// No description provided for @chatHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史会话'**
+  String get chatHistory;
+
+  /// No description provided for @chatInputHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'问一句关于你笔记的问题…'**
+  String get chatInputHint;
+
+  /// No description provided for @chatEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'向你的记忆提问，AI 会引用相关笔记作答'**
+  String get chatEmpty;
+
+  /// No description provided for @chatSources.
+  ///
+  /// In zh, this message translates to:
+  /// **'引用'**
+  String get chatSources;
+
+  /// No description provided for @chatDeleteSessionConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除这个会话？'**
+  String get chatDeleteSessionConfirm;
+
+  /// No description provided for @chatUnconfigured.
+  ///
+  /// In zh, this message translates to:
+  /// **'先配置 AI 助手（对话模型），即可与记忆对话'**
+  String get chatUnconfigured;
+
+  /// No description provided for @chatGoConfig.
+  ///
+  /// In zh, this message translates to:
+  /// **'去配置'**
+  String get chatGoConfig;
+
   /// No description provided for @voiceInput.
   ///
   /// In zh, this message translates to:
