@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -350,4 +352,65 @@ void main() {
         .join();
     expect(text, '你好');
   });
+
+  test('parseChatDeltas flushes a trailing data line without newline',
+      () async {
+    // Well-behaved tail: [DONE] arrives newline-terminated, as usual.
+    expect(
+        await parseChatDeltas(Stream.value(utf8.encode(
+                'data: {"choices":[{"delta":{"content":"早"}}]}\n\n'
+                'data: [DONE]\n\n')))
+            .join(),
+        '早');
+    // Degenerate tail: the server closes the connection right after the
+    // last data line with no '\n'. The decoder's flush path must still
+    // emit that delta on stream close.
+    expect(
+        await parseChatDeltas(Stream.value(utf8.encode(
+                'data: {"choices":[{"delta":{"content":"早"}}]}\n\n'
+                'data: {"choices":[{"delta":{"content":"晚"}}]}')))
+            .join(),
+        '早晚');
+  });
+
+  test('chatStream maps mid-stream transport failures to LlmApiException',
+      () async {
+    // 200 arrives, one delta streams, then the connection drops — the
+    // documented contract says the stream must still error with
+    // [LlmApiException], not a raw socket/Dio error.
+    final brokenDio =
+        createLlmDio(baseUrl: 'https://llm.example.com/v1', apiKey: 'sk-x');
+    brokenDio.httpClientAdapter = _MidStreamDropAdapter();
+    await expectLater(
+      LlmApi(brokenDio).chatStream(
+          model: 'deepseek-chat',
+          messages: const [LlmChatMessage(role: 'user', content: 'hi')]),
+      emitsInOrder([
+        '早',
+        emitsError(isA<LlmApiException>()),
+        emitsDone,
+      ]),
+    );
+  });
+}
+
+/// Adapter whose 200 response stream yields one delta and then dies like a
+/// dropped socket.
+class _MidStreamDropAdapter implements HttpClientAdapter {
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) {
+    final controller = StreamController<Uint8List>();
+    controller.add(
+        utf8.encode('data: {"choices":[{"delta":{"content":"早"}}]}\n\n'));
+    controller.addError(const SocketException('connection reset by peer'));
+    controller.close();
+    return Future.value(ResponseBody(controller.stream, 200));
+  }
+
+  @override
+  void close({bool force = false}) {}
 }

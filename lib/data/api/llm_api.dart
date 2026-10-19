@@ -137,7 +137,8 @@ class LlmChatMessage {
 
 /// SSE `data:` payload lines from a byte stream (comments and blanks
 /// dropped). Streaming-decoded UTF-8, so multi-byte sequences split across
-/// chunk boundaries survive.
+/// chunk boundaries survive; malformed bytes decode to U+FFFD instead of
+/// killing the stream.
 ///
 /// Deliberately composed from chunked conversion sinks instead of
 /// `bytes.transform(utf8.decoder)` / `Converter.bind`: those trip over
@@ -147,7 +148,8 @@ Stream<String> extractSseDataLines(Stream<List<int>> bytes) async* {
   final lines = <String>[];
   final splitter = const LineSplitter()
       .startChunkedConversion(_CallbackStringSink(lines.add));
-  final decoder = utf8.decoder.startChunkedConversion(splitter);
+  final decoder = const Utf8Decoder(allowMalformed: true)
+      .startChunkedConversion(splitter);
   await for (final chunk in bytes) {
     decoder.add(chunk);
     for (final line in lines) {
@@ -313,6 +315,21 @@ class LlmApi {
     }
     final body = res.data;
     if (body == null) return;
-    yield* parseChatDeltas(body.stream);
+    // Map failures DURING the delta stream too (socket drop after the 200,
+    // read timeout): without this, raw transport errors escape and break
+    // the documented [LlmApiException] contract mid-generation.
+    try {
+      await for (final delta in parseChatDeltas(body.stream)) {
+        yield delta;
+      }
+    } on LlmApiException {
+      rethrow;
+    } on DioException catch (e) {
+      final inner = e.error;
+      if (inner is LlmApiException) throw inner;
+      throw LlmApiException(_llmMessageOf(e), cause: e, kind: _kindOf(e));
+    } on Exception catch (e) {
+      throw LlmApiException(e.toString(), cause: e);
+    }
   }
 }
