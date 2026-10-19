@@ -75,7 +75,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     // Re-subscribe when the active session changes (incl. first creation).
     final sessionId = _sessionId;
     if (sessionId != null && _messagesSub == null) {
-      Future.microtask(() => _subscribeMessages(sessionId));
+      // The microtask may run after dispose, or after a newer subscription
+      // (session switch / new session) took over: bail instead of
+      // resubscribing a dead page to a stale session.
+      Future.microtask(() {
+        if (!mounted || _messagesSub != null) return;
+        _subscribeMessages(sessionId);
+      });
     }
 
     return Scaffold(

@@ -7,7 +7,9 @@ import '../../core/theme/app_theme.dart';
 import '../../data/models/models.dart';
 
 /// Renders memo content as Markdown. `#tags` are rewritten into internal
-/// links so they become tappable chips.
+/// links so they become tappable chips; `[n]` markers become tappable cite
+/// links when the caller listens for citations. Code spans/fences and, in
+/// the cite case, existing markdown links are never rewritten.
 class MemoMarkdown extends StatelessWidget {
   const MemoMarkdown({
     super.key,
@@ -25,39 +27,70 @@ class MemoMarkdown extends StatelessWidget {
   static final RegExp _tagInCode = RegExp(r'```[\s\S]*?```|`[^`\n]*`');
   static final RegExp _tagPattern = RegExp(r'(^|[\s(])#([^\s#),.；。，、]+)');
 
-  /// Wraps `#tag` occurrences into markdown links; code spans are preserved.
-  String _linkifyTags(String src) {
-    final codeSpans = <String>[];
-    var out = src.replaceAllMapped(_tagInCode, (m) {
-      codeSpans.add(m.group(0)!);
-      return '\u0000${codeSpans.length - 1}\u0000';
+  /// Existing markdown links (inline `[text](url)` and reference
+  /// `[text][ref]`) that the cite rewrite must not corrupt.
+  static final RegExp _mdLink =
+      RegExp(r'\[[^\]]*\]\([^)]*\)|\[[^\]]*\]\[[^\]]*\]');
+
+  /// Replaces every [pattern] match with a `sentinel<index>sentinel`
+  /// placeholder, remembering the originals in [store] in order. Pair with
+  /// [_restore] using the same [sentinel]; one sentinel per region kind keeps
+  /// the restore passes from colliding.
+  static String _mask(
+      String src, RegExp pattern, String sentinel, List<String> store) {
+    return src.replaceAllMapped(pattern, (m) {
+      store.add(m.group(0)!);
+      return '$sentinel${store.length - 1}$sentinel';
     });
-    out = out.replaceAllMapped(_tagPattern, (m) {
+  }
+
+  /// Restores every `$sentinel<n>$sentinel` placeholder made by [_mask].
+  static String _restore(String src, String sentinel, List<String> store) {
+    for (var i = 0; i < store.length; i++) {
+      src = src.replaceFirst('$sentinel$i$sentinel', store[i]);
+    }
+    return src;
+  }
+
+  /// Wraps `#tag` occurrences into markdown links.
+  static String _rewriteTags(String src) {
+    return src.replaceAllMapped(_tagPattern, (m) {
       final prefix = m.group(1) ?? '';
       final tag = m.group(2)!;
       return '$prefix[#$tag](#tag:$tag)';
     });
-    for (var i = 0; i < codeSpans.length; i++) {
-      out = out.replaceFirst('\u0000$i\u0000', codeSpans[i]);
-    }
-    return out;
   }
 
-  /// Rewrites `[n]` citation markers into tappable links when the caller
-  /// cares about citations (chat answers); memo rendering is unchanged.
-  String _linkifyCites(String src) {
-    final onCite = onCiteTap;
-    if (onCite == null) return src;
+  /// Rewrites `[n]` citation markers into tappable links.
+  static String _rewriteCites(String src) {
     return src.replaceAllMapped(RegExp(r'\[(\d{1,3})\]'), (m) {
       return '[[${m[1]}]](#cite:${m[1]})';
     });
+  }
+
+  /// Full transform: `#tags` become chips, and — only when [onCiteTap] is
+  /// set (chat answers) — `[n]` markers become cite links. Code spans/fences
+  /// stay masked across both rewrites; with cites active, existing markdown
+  /// links are masked too, so neither is ever rewritten. Without [onCiteTap]
+  /// (the memo path) the output is byte-identical to tags-only rewriting.
+  String _linkify(String src) {
+    final code = <String>[];
+    var out = _mask(src, _tagInCode, '\u0000', code);
+    out = _rewriteTags(out);
+    if (onCiteTap != null) {
+      final links = <String>[];
+      out = _mask(out, _mdLink, '\u0001', links);
+      out = _rewriteCites(out);
+      out = _restore(out, '\u0001', links);
+    }
+    return _restore(out, '\u0000', code);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return MarkdownBody(
-      data: _linkifyCites(_linkifyTags(content)),
+      data: _linkify(content),
       selectable: selectable,
       shrinkWrap: true,
       extensionSet: md.ExtensionSet.gitHubWeb,
@@ -95,7 +128,8 @@ class MemoMarkdown extends StatelessWidget {
           return;
         }
         if (href.startsWith('#cite:')) {
-          onCiteTap?.call(int.parse(Uri.decodeComponent(href.substring(6))));
+          final n = int.tryParse(Uri.decodeComponent(href.substring(6)));
+          if (n != null) onCiteTap?.call(n);
           return;
         }
         debugPrint('open url: $href');
