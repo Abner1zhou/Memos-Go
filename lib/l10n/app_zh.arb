@@ -213,7 +213,6 @@
   "chatHistory": "历史会话",
   "chatInputHint": "问一句关于你笔记的问题…",
   "chatEmpty": "向你的记忆提问，AI 会引用相关笔记作答",
-  "chatSources": "引用",
   "chatDeleteSessionConfirm": "删除这个会话？",
   "chatUnconfigured": "先配置 AI 助手（对话模型），即可与记忆对话",
   "chatGoConfig": "去配置",

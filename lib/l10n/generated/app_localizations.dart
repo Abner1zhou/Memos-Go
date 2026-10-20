@@ -1118,12 +1118,6 @@ abstract class AppLocalizations {
   /// **'向你的记忆提问，AI 会引用相关笔记作答'**
   String get chatEmpty;
 
-  /// No description provided for @chatSources.
-  ///
-  /// In zh, this message translates to:
-  /// **'引用'**
-  String get chatSources;
-
   /// No description provided for @chatDeleteSessionConfirm.
   ///
   /// In zh, this message translates to:

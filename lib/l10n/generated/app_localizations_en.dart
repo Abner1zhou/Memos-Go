@@ -554,9 +554,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Ask your memories a question; the AI answers with citations';
 
   @override
-  String get chatSources => 'Sources';
-
-  @override
   String get chatDeleteSessionConfirm => 'Delete this conversation?';
 
   @override

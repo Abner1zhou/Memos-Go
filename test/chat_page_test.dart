@@ -56,6 +56,19 @@ class _SlowSendRepo extends _FakeRepo {
   }
 }
 
+/// 30 段多行长文本：流式答案远超一屏，驱动自动滚动断言。只在滚动用例
+/// 使用，不改共享的 _FakeRepo（其他用例断言的是短回答）。
+class _LongStreamRepo extends _FakeRepo {
+  @override
+  Stream<String> chatStream(LlmSettings settings,
+      {required List<LlmChatMessage> messages, int? maxTokens}) async* {
+    for (var i = 0; i < 30; i++) {
+      yield '第 $i 段：这段流式回答刻意写得很长，一行行把内容撑出视口，'
+          '好让自动滚动有贴底的目标可以追赶。\n\n';
+    }
+  }
+}
+
 class _StubAuthNotifier extends AuthNotifier {
   @override
   AuthState build() => AuthState(
@@ -216,6 +229,30 @@ void main() {
     final finalMessages = await tester.runAsync(
         () => db.chatDao.lastMessages(testAccount.id, sessions!.first.id, 10));
     expect(finalMessages!.map((m) => m.role), ['user', 'assistant']);
+  });
+
+  testWidgets('streaming auto-scrolls to the growing tail', (tester) async {
+    await pumpPage(tester, repo: _LongStreamRepo());
+
+    await tester.enterText(find.byType(TextField), '长回答');
+    await tester.tap(find.byIcon(Icons.send_rounded));
+    // 同流式用例：先放行检索 isolate 的真实事件循环结果，再让
+    // pumpAndSettle 排干流式微任务链（onDone 后 spinner 移除，可 settle）。
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await tester.pumpAndSettle();
+
+    // 30 段长文本必然超一屏：断言列表不在顶部、且贴底（留 10% 视口
+    // 容差抗字体/渲染差异）。
+    final scroll = tester.state<ScrollableState>(find
+        .descendant(of: find.byType(ListView), matching: find.byType(Scrollable))
+        .first);
+    expect(scroll.position.maxScrollExtent, greaterThan(0),
+        reason: '种子回答必须超过一屏，否则用例失效');
+    expect(scroll.position.pixels, greaterThanOrEqualTo(0));
+    expect(
+        scroll.position.maxScrollExtent - scroll.position.pixels,
+        lessThanOrEqualTo(scroll.position.viewportDimension * 0.1 + 8));
   });
 
   testWidgets('unconfigured shows the setup affordance', (tester) async {

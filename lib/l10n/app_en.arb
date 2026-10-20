@@ -213,7 +213,6 @@
   "chatHistory": "History",
   "chatInputHint": "Ask anything about your memos…",
   "chatEmpty": "Ask your memories a question; the AI answers with citations",
-  "chatSources": "Sources",
   "chatDeleteSessionConfirm": "Delete this conversation?",
   "chatUnconfigured": "Configure the AI assistant (chat model) to chat with your memories",
   "chatGoConfig": "Set up",

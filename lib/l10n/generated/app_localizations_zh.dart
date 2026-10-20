@@ -539,9 +539,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatEmpty => '向你的记忆提问，AI 会引用相关笔记作答';
 
   @override
-  String get chatSources => '引用';
-
-  @override
   String get chatDeleteSessionConfirm => '删除这个会话？';
 
   @override

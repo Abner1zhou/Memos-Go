@@ -67,18 +67,6 @@ class ChatDao extends DatabaseAccessor<AppDatabase> with _$ChatDaoMixin {
         accountId: accountId, id: id, title: '', createdAt: now, updatedAt: now);
   }
 
-  Future<void> renameSession(String accountId, String sessionId, String title) =>
-      (update(chatSessions)
-            ..where((s) =>
-                s.accountId.equals(accountId) & s.id.equals(sessionId)))
-          .write(ChatSessionsCompanion(title: Value(title)));
-
-  Future<void> touchSession(String accountId, String sessionId) =>
-      (update(chatSessions)
-            ..where((s) =>
-                s.accountId.equals(accountId) & s.id.equals(sessionId)))
-          .write(ChatSessionsCompanion(updatedAt: Value(DateTime.now())));
-
   Future<void> appendMessage(
     String accountId,
     String sessionId, {
@@ -158,16 +146,6 @@ class ChatDao extends DatabaseAccessor<AppDatabase> with _$ChatDaoMixin {
         await (delete(chatSessions)
               ..where((s) =>
                   s.accountId.equals(accountId) & s.id.equals(sessionId)))
-            .go();
-      });
-
-  Future<void> deleteAllForAccount(String accountId) =>
-      transaction(() async {
-        await (delete(chatMessages)
-              ..where((m) => m.accountId.equals(accountId)))
-            .go();
-        await (delete(chatSessions)
-              ..where((s) => s.accountId.equals(accountId)))
             .go();
       });
 }
