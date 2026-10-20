@@ -4,6 +4,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'chat_dao.dart';
 import 'embedding_dao.dart';
 import 'memo_dao.dart';
+import 'suggestion_dao.dart';
 
 part 'app_database.g.dart';
 
@@ -151,6 +152,25 @@ class ChatMessages extends Table {
   Set<Column> get primaryKey => {accountId, sessionId, seq};
 }
 
+/// Cached save-time suggestion per memo (P4). Invalidated by contentHash:
+/// the engine re-computes when the memo's content hash changes.
+@DataClassName('MemoSuggestionsRow')
+class MemoSuggestions extends Table {
+  TextColumn get accountId => text()();
+  TextColumn get memoUid => text()();
+  IntColumn get contentHash => integer()();
+
+  /// JSON array of suggested tag strings.
+  TextColumn get tagsJson => text().withDefault(const Constant('[]'))();
+
+  /// JSON array of related memo names (`memos/{uid}`).
+  TextColumn get relatedUidsJson => text().withDefault(const Constant('[]'))();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {accountId, memoUid};
+}
+
 @DriftDatabase(
   tables: [
     Memos,
@@ -160,8 +180,9 @@ class ChatMessages extends Table {
     MemoEmbeddings,
     ChatSessions,
     ChatMessages,
+    MemoSuggestions,
   ],
-  daos: [MemoDao, EmbeddingDao, ChatDao],
+  daos: [MemoDao, EmbeddingDao, ChatDao, SuggestionDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
@@ -173,7 +194,7 @@ class AppDatabase extends _$AppDatabase {
       : super(DatabaseConnection(e, closeStreamsSynchronously: true));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -193,6 +214,9 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
                 'CREATE INDEX IF NOT EXISTS idx_chat_messages_session '
                 'ON chat_messages (account_id, session_id, seq)');
+          }
+          if (from < 4) {
+            await m.createTable(memoSuggestions);
           }
         },
       );
