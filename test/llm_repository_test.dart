@@ -91,6 +91,22 @@ void main() {
     expect(base.copyWith(chatModel: 'm2').apiKey, 'k');
   });
 
+  test('suggestOnSave roundtrips and defaults on', () async {
+    expect(const LlmSettings().suggestOnSave, isTrue);
+    await repo.save(const LlmSettings(
+        baseUrl: 'https://x', apiKey: 'k', chatModel: 'm',
+        suggestOnSave: false));
+    expect((await repo.load()).suggestOnSave, isFalse);
+    // 旧配置缺字段 → 默认开启。
+    storage.values['memos_go.llmConfig'] =
+        '{"baseUrl":"https://x","apiKey":"k","chatModel":"m"}';
+    expect((await repo.load()).suggestOnSave, isTrue);
+    // 坏类型不崩。
+    storage.values['memos_go.llmConfig'] =
+        '{"baseUrl":"https://x","apiKey":"k","chatModel":"m","suggestOnSave":"yes"}';
+    expect((await repo.load()).suggestOnSave, isTrue);
+  });
+
   test('chatStream rejects on a non-2xx SSE response', () async {
     // 结构性测试：仓库层把错误映射成 LlmApiException 后，
     // chatStream 的 Stream 以 LlmApiException 报错。

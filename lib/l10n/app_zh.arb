@@ -216,6 +216,8 @@
   "chatDeleteSessionConfirm": "删除这个会话？",
   "chatUnconfigured": "先配置 AI 助手（对话模型），即可与记忆对话",
   "chatGoConfig": "去配置",
+  "llmSuggestOnSave": "保存时建议",
+  "llmSuggestOnSaveSubtitle": "保存笔记后自动建议标签与相关记忆，在详情页查看",
   "voiceInput": "语音输入",
   "recording": "录音中…",
   "finishRecording": "完成",

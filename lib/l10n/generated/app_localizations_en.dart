@@ -564,6 +564,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatGoConfig => 'Set up';
 
   @override
+  String get llmSuggestOnSave => 'Suggest on save';
+
+  @override
+  String get llmSuggestOnSaveSubtitle =>
+      'Suggest tags and related memos after saving; shown on the memo detail page';
+
+  @override
   String get voiceInput => 'Voice input';
 
   @override

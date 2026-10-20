@@ -548,6 +548,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatGoConfig => '去配置';
 
   @override
+  String get llmSuggestOnSave => '保存时建议';
+
+  @override
+  String get llmSuggestOnSaveSubtitle => '保存笔记后自动建议标签与相关记忆，在详情页查看';
+
+  @override
   String get voiceInput => '语音输入';
 
   @override

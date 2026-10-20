@@ -216,6 +216,8 @@
   "chatDeleteSessionConfirm": "Delete this conversation?",
   "chatUnconfigured": "Configure the AI assistant (chat model) to chat with your memories",
   "chatGoConfig": "Set up",
+  "llmSuggestOnSave": "Suggest on save",
+  "llmSuggestOnSaveSubtitle": "Suggest tags and related memos after saving; shown on the memo detail page",
   "voiceInput": "Voice input",
   "recording": "Recording…",
   "finishRecording": "Done",

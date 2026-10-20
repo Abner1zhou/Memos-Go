@@ -1136,6 +1136,18 @@ abstract class AppLocalizations {
   /// **'去配置'**
   String get chatGoConfig;
 
+  /// No description provided for @llmSuggestOnSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存时建议'**
+  String get llmSuggestOnSave;
+
+  /// No description provided for @llmSuggestOnSaveSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存笔记后自动建议标签与相关记忆，在详情页查看'**
+  String get llmSuggestOnSaveSubtitle;
+
   /// No description provided for @voiceInput.
   ///
   /// In zh, this message translates to:
