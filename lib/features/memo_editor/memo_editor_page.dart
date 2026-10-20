@@ -182,7 +182,11 @@ class _MemoEditorPageState extends ConsumerState<MemoEditorPage> {
   /// the text at the caret and (optionally) keep the audio as an attachment.
   Future<void> _startVoiceInput() async {
     final l10n = AppLocalizations.of(context)!;
-    final asr = ref.read(asrProvider);
+    // Waits out the cold-start hydration race: a one-shot provider read
+    // here would see the optimistic defaults and false-report "not
+    // configured" while storage still holds a valid config.
+    final asr = await ref.read(asrProvider.notifier).readHydrated();
+    if (!mounted) return;
     if (!asr.isConfigured) {
       await showAsrSetupDialog(context);
       return;

@@ -33,4 +33,28 @@ void main() {
 
     expect(container.read(asrProvider).model, 'm');
   });
+
+  test('a cold-start voice action sees the stored config', () async {
+    storage.values['memos_go.asrConfig'] =
+        '{"dialect":"openai","baseUrl":"https://x/v1","apiKey":"k",'
+        '"model":"m","language":"","keepAudio":true}';
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    // A one-shot read still sees the optimistic default while the storage
+    // load is in flight — this is why entry points must use readHydrated.
+    expect(container.read(asrProvider).isConfigured, isFalse);
+    final asr = await container.read(asrProvider.notifier).readHydrated();
+    expect(asr.isConfigured, isTrue);
+    expect(asr.model, 'm');
+  });
+
+  test('readHydrated resolves with defaults when nothing is stored',
+      () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final asr = await container.read(asrProvider.notifier).readHydrated();
+    expect(asr.isConfigured, isFalse);
+  });
 }
