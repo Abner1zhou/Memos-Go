@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 /// Coarse error class so UI can localize without parsing messages.
@@ -133,6 +135,72 @@ class LlmChatMessage {
   Map<String, dynamic> toJson() => {'role': role, 'content': content};
 }
 
+/// SSE `data:` payload lines from a byte stream (comments and blanks
+/// dropped). Streaming-decoded UTF-8, so multi-byte sequences split across
+/// chunk boundaries survive; malformed bytes decode to U+FFFD instead of
+/// killing the stream.
+///
+/// Deliberately composed from chunked conversion sinks instead of
+/// `bytes.transform(utf8.decoder)` / `Converter.bind`: those trip over
+/// dart-lang/sdk#48395 (runtime transformer-type mismatch on
+/// `Stream<Uint8List>`) and misbehave on some dio streams.
+Stream<String> extractSseDataLines(Stream<List<int>> bytes) async* {
+  final lines = <String>[];
+  final splitter = const LineSplitter()
+      .startChunkedConversion(_CallbackStringSink(lines.add));
+  final decoder = const Utf8Decoder(allowMalformed: true)
+      .startChunkedConversion(splitter);
+  await for (final chunk in bytes) {
+    decoder.add(chunk);
+    for (final line in lines) {
+      if (line.startsWith('data:')) yield line.substring(5).trim();
+    }
+    lines.clear();
+  }
+  decoder.close();
+  for (final line in lines) {
+    if (line.startsWith('data:')) yield line.substring(5).trim();
+  }
+}
+
+/// Minimal sink that forwards each completed value to [onValue].
+class _CallbackStringSink implements ChunkedConversionSink<String> {
+  _CallbackStringSink(this.onValue);
+
+  final void Function(String value) onValue;
+
+  @override
+  void add(String value) => onValue(value);
+
+  @override
+  void close() {}
+}
+
+/// Text deltas of an OpenAI-compatible streaming chat completion.
+/// Stops at `[DONE]`; malformed payloads and non-content events are
+/// skipped instead of killing the stream.
+Stream<String> parseChatDeltas(Stream<List<int>> bytes) async* {
+  await for (final data in extractSseDataLines(bytes)) {
+    if (data == '[DONE]') return;
+    if (data.isEmpty) continue;
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map) continue;
+      final choices = json['choices'];
+      if (choices is! List || choices.isEmpty) continue;
+      final first = choices.first;
+      if (first is! Map) continue;
+      final delta = first['delta'];
+      if (delta is Map) {
+        final content = delta['content'];
+        if (content is String && content.isNotEmpty) yield content;
+      }
+    } catch (_) {
+      // Skip malformed events.
+    }
+  }
+}
+
 /// Client for an OpenAI-compatible chat-completions + embeddings endpoint.
 /// P1 uses [chat] for the review digest; [embeddings] powers the settings
 /// page connection test now and semantic search in P2.
@@ -215,6 +283,53 @@ class LlmApi {
       final inner = e.error;
       if (inner is LlmApiException) throw inner;
       throw LlmApiException(_llmMessageOf(e), cause: e, kind: _kindOf(e));
+    }
+  }
+
+  /// Streaming variant of [chat]: yields assistant text deltas parsed from
+  /// the OpenAI-compatible SSE response. The stream errors with
+  /// [LlmApiException] on transport/HTTP failures.
+  Stream<String> chatStream({
+    required String model,
+    required List<LlmChatMessage> messages,
+    int? maxTokens,
+  }) async* {
+    Response<ResponseBody> res;
+    try {
+      res = await dio.post<ResponseBody>(
+        '/chat/completions',
+        data: {
+          'model': model,
+          'messages': messages.map((m) => m.toJson()).toList(),
+          'max_tokens': ?maxTokens,
+          'stream': true,
+        },
+        options: Options(responseType: ResponseType.stream),
+      );
+    } on LlmApiException {
+      rethrow;
+    } on DioException catch (e) {
+      final inner = e.error;
+      if (inner is LlmApiException) throw inner;
+      throw LlmApiException(_llmMessageOf(e), cause: e, kind: _kindOf(e));
+    }
+    final body = res.data;
+    if (body == null) return;
+    // Map failures DURING the delta stream too (socket drop after the 200,
+    // read timeout): without this, raw transport errors escape and break
+    // the documented [LlmApiException] contract mid-generation.
+    try {
+      await for (final delta in parseChatDeltas(body.stream)) {
+        yield delta;
+      }
+    } on LlmApiException {
+      rethrow;
+    } on DioException catch (e) {
+      final inner = e.error;
+      if (inner is LlmApiException) throw inner;
+      throw LlmApiException(_llmMessageOf(e), cause: e, kind: _kindOf(e));
+    } on Exception catch (e) {
+      throw LlmApiException(e.toString(), cause: e);
     }
   }
 }

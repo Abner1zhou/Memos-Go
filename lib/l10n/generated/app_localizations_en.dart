@@ -535,6 +535,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchSemantic => 'Semantically related';
 
   @override
+  String get chatEntry => 'AI chat';
+
+  @override
+  String get chatTitle => 'Chat with memories';
+
+  @override
+  String get chatNewSession => 'New chat';
+
+  @override
+  String get chatHistory => 'History';
+
+  @override
+  String get chatInputHint => 'Ask anything about your memos…';
+
+  @override
+  String get chatEmpty =>
+      'Ask your memories a question; the AI answers with citations';
+
+  @override
+  String get chatSources => 'Sources';
+
+  @override
+  String get chatDeleteSessionConfirm => 'Delete this conversation?';
+
+  @override
+  String get chatUnconfigured =>
+      'Configure the AI assistant (chat model) to chat with your memories';
+
+  @override
+  String get chatGoConfig => 'Set up';
+
+  @override
   String get voiceInput => 'Voice input';
 
   @override

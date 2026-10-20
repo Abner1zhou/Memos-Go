@@ -120,6 +120,20 @@ class LlmRepository {
     );
   }
 
+  /// Streaming variant of [chat] for the RAG conversation page.
+  Stream<String> chatStream(
+    LlmSettings settings, {
+    required List<LlmChatMessage> messages,
+    int? maxTokens,
+  }) {
+    final dio = _dioFor(settings);
+    return LlmApi(dio).chatStream(
+      model: settings.chatModel.trim(),
+      messages: messages,
+      maxTokens: maxTokens,
+    );
+  }
+
   Future<List<List<double>>> embeddings(
     LlmSettings settings, {
     required List<String> inputs,

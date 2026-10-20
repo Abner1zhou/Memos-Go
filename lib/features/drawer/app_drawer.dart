@@ -104,6 +104,11 @@ class AppDrawer extends ConsumerWidget {
               onTap: () => _go(context, '/random'),
             ),
             _MenuItem(
+              icon: Icons.forum_outlined,
+              label: l10n.chatEntry,
+              onTap: () => _go(context, '/chat'),
+            ),
+            _MenuItem(
               icon: Icons.delete_outline,
               label: l10n.trash,
               onTap: () => _go(context, '/trash'),
