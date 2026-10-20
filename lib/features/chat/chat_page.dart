@@ -430,7 +430,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                               // 避免已置空的会话上继续收 chunk / 触发滚动。
                               _deltaSub?.cancel();
                               _deltaSub = null;
-                              setState(() => _sessionId = null);
+                              // 取消后 onDone/onError 不再触发，流式状态
+                              // （_busy/_pending）须在此一并复位，否则发送
+                              // 按钮永久禁用、幽灵气泡残留。
+                              setState(() {
+                                _busy = false;
+                                _pending = null;
+                                _sessionId = null;
+                              });
                               _messagesSub?.cancel();
                               _messagesSub = null;
                               setState(() => _messages = const []);
