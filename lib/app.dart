@@ -20,6 +20,7 @@ import 'features/settings/settings_page.dart';
 import 'features/trash/trash_page.dart';
 import 'providers/auth_providers.dart';
 import 'providers/settings_providers.dart';
+import 'providers/suggestion_providers.dart';
 import 'providers/sync_providers.dart';
 import 'providers/vectorization_providers.dart';
 
@@ -141,6 +142,8 @@ class MemosGoApp extends ConsumerWidget {
     ref.watch(syncEngineProvider);
     // Keeps the vectorization engine alive alongside sync.
     ref.watch(vectorizationEngineProvider);
+    // Keeps the save-time suggestion engine alive alongside both.
+    ref.watch(suggestionEngineProvider);
     return MaterialApp.router(
       onGenerateTitle: (context) =>
           AppLocalizations.of(context)!.appTitle,
