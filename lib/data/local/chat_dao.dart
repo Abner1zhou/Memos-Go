@@ -1,7 +1,9 @@
 import 'dart:convert' as convert;
 
+import 'package:characters/characters.dart';
 import 'package:drift/drift.dart';
 
+import '../../core/utils/text_clip.dart';
 import 'app_database.dart';
 
 part 'chat_dao.g.dart';
@@ -108,11 +110,15 @@ class ChatDao extends DatabaseAccessor<AppDatabase> with _$ChatDaoMixin {
             .getSingle();
         if (role == 'user' && session.title.isEmpty && content.trim().isNotEmpty) {
           final title = content.trim();
+          // Grapheme-safe 30-char cap: a UTF-16-blind substring could split
+          // a surrogate pair and store a broken emoji in the title.
+          final clipped =
+              title.characters.length > 30 ? clipText(title, 30) : title;
           await (update(chatSessions)
                 ..where((s) =>
                     s.accountId.equals(accountId) & s.id.equals(sessionId)))
               .write(ChatSessionsCompanion(
-                  title: Value(title.length > 30 ? title.substring(0, 30) : title),
+                  title: Value(clipped),
                   updatedAt: Value(now)));
         } else {
           await (update(chatSessions)

@@ -138,10 +138,19 @@ void main() {
     final session = await db.chatDao.createSession('acc-1');
     await engine.send(sessionId: session.id, question: '方案', language: 'zh');
 
-    final sent = repo.postedBodies.single['messages'] as List;
+    final sent = repo.postedBodies.first['messages'] as List;
     final context = (sent.last as Map)['content'] as String;
     expect(context.contains('很长的内容'), isTrue);
     expect(context.length, lessThan(1000));
+
+    // 问题文本也受 historyClipChars 预算约束（grapheme 安全）。
+    final q = List.filled(2000, '问').join();
+    await engine.send(sessionId: session.id, question: q, language: 'zh');
+    final sent2 = repo.postedBodies.last['messages'] as List;
+    final prompt2 = (sent2.last as Map)['content'] as String;
+    // 截后问题（1000 字 + …）加上摘要段；不截断时整条 prompt 约 2400 字。
+    expect(prompt2.length, lessThan(1500));
+    expect(prompt2.endsWith('…\n'), isTrue);
   });
 
   test('history answers ride back clipped to the per-message budget',

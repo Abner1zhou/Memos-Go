@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 
@@ -33,6 +34,15 @@ LlmErrorKind _kindOf(DioException e) {
     DioExceptionType.connectionError => LlmErrorKind.unreachable,
     _ => LlmErrorKind.unknown,
   };
+}
+
+/// Coarse class of a NON-Dio error escaping a stream (raw socket drops
+/// etc.), so mid-stream failures still localize as "unreachable".
+LlmErrorKind kindOfRawError(Object error) {
+  if (error is SocketException || error is HttpException) {
+    return LlmErrorKind.unreachable;
+  }
+  return LlmErrorKind.unknown;
 }
 
 /// Normalizes a user-entered OpenAI-compatible endpoint: adds https:// when
@@ -329,7 +339,7 @@ class LlmApi {
       if (inner is LlmApiException) throw inner;
       throw LlmApiException(_llmMessageOf(e), cause: e, kind: _kindOf(e));
     } on Exception catch (e) {
-      throw LlmApiException(e.toString(), cause: e);
+      throw LlmApiException(e.toString(), cause: e, kind: kindOfRawError(e));
     }
   }
 }

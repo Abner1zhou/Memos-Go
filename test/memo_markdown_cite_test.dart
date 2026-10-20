@@ -133,4 +133,23 @@ void main() {
     await tester.pump();
     expect(tapped, [1]);
   });
+
+  testWidgets('reference link definitions are not citified', (tester) async {
+    final tapped = <int>[];
+    await pumpMd(
+        tester,
+        MemoMarkdown(
+          content: '[1]: https://example.com/a\n\n见 [2]。',
+          onCiteTap: tapped.add,
+        ));
+    // `[2]` 嵌在段落里不单独成 RichText，按 span 定位点击。
+    await tester.tapAt(spanCenter(tester, '见 [2]', '[2]'));
+    await tester.pump();
+    expect(tapped, [2]);
+    // 定义行未被改写成 cite 链接：完好的 `[1]: url` 会被 markdown 解析器
+    // 作为 reference definition 正常消化、不渲染任何文本；若被改写破坏
+    // （`[[1]](#cite:1): url`），这一行会渲染成含 URL 的可见伪段落。
+    expect(find.textContaining('https://example.com/a', findRichText: true),
+        findsNothing);
+  });
 }
