@@ -144,6 +144,69 @@ void main() {
     expect(context.length, lessThan(1000));
   });
 
+  test('history answers ride back clipped to the per-message budget',
+      () async {
+    final session = await db.chatDao.createSession('acc-1');
+    // 3000 字的上轮回答：窗口（条数）放它进来，per-message 上限把它截短。
+    await db.chatDao.appendMessage('acc-1', session.id,
+        role: 'assistant',
+        content: '巨' * 3000,
+        now: DateTime(2026, 10, 15));
+
+    await engine.send(sessionId: session.id, question: '接着聊', language: 'zh');
+
+    final sent = repo.postedBodies.single['messages'] as List;
+    expect(sent.length, 3); // system + 1 条被截短的历史 + 本轮 user
+    final history = sent[1] as Map;
+    expect(history['role'], 'assistant');
+    final content = history['content'] as String;
+    expect(content.length, lessThanOrEqualTo(1001)); // clip + ellipsis
+    expect(content.endsWith('…'), isTrue);
+  });
+
+  test('mid-stream failure persists the partial answer with sources',
+      () async {
+    final failing = RagChatEngine(
+      accountId: 'acc-1',
+      db: db,
+      repository: _PartialThenThrowRepo(),
+      retrieval: RetrievalService(db: db, repository: _PartialThenThrowRepo()),
+    );
+    final session = await db.chatDao.createSession('acc-1');
+    final turn =
+        await failing.send(sessionId: session.id, question: '方案', language: 'zh');
+
+    // onDone 在 pump 落库与 close 之后触发——await 它即可安全断言持久化结果。
+    final errors = <Object>[];
+    final done = Completer<void>();
+    turn.deltas.listen((_) {}, onError: errors.add, onDone: done.complete);
+    await done.future;
+
+    expect(errors.single, isA<LlmApiException>());
+    final messages = await db.chatDao.lastMessages('acc-1', session.id, 10);
+    expect(messages.map((m) => m.role), ['user', 'assistant']);
+    expect(messages.last.content, '部分');
+    expect(messages.last.parsedSources.single.uid, 'memos/plan');
+  });
+
+  test('failure before the first chunk persists no assistant row', () async {
+    final failing = RagChatEngine(
+      accountId: 'acc-1',
+      db: db,
+      repository: _ThrowBeforeFirstChunkRepo(),
+      retrieval:
+          RetrievalService(db: db, repository: _ThrowBeforeFirstChunkRepo()),
+    );
+    final session = await db.chatDao.createSession('acc-1');
+    final turn =
+        await failing.send(sessionId: session.id, question: '方案', language: 'zh');
+
+    await expectLater(turn.deltas.join(), throwsA(isA<LlmApiException>()));
+
+    final messages = await db.chatDao.lastMessages('acc-1', session.id, 10);
+    expect(messages.map((m) => m.role), ['user']);
+  });
+
   test('no embedding model still chats, without citations', () async {
     final bare = RagChatEngine(
       accountId: 'acc-1',
@@ -170,6 +233,37 @@ void main() {
         bare.send(sessionId: session.id, question: 'x', language: 'zh'),
         throwsA(isA<LlmApiException>()));
   });
+}
+
+class _PartialThenThrowRepo extends LlmRepository {
+  @override
+  Future<LlmSettings> load() async => _settings;
+
+  @override
+  Future<List<List<double>>> embeddings(LlmSettings s,
+      {required List<String> inputs}) async => const [[1.0, 0.0]];
+
+  @override
+  Stream<String> chatStream(LlmSettings settings,
+      {required List<LlmChatMessage> messages, int? maxTokens}) async* {
+    yield '部分';
+    throw const LlmApiException('HTTP 500 boom');
+  }
+}
+
+class _ThrowBeforeFirstChunkRepo extends LlmRepository {
+  @override
+  Future<LlmSettings> load() async => _settings;
+
+  @override
+  Future<List<List<double>>> embeddings(LlmSettings s,
+      {required List<String> inputs}) async => const [[1.0, 0.0]];
+
+  @override
+  Stream<String> chatStream(LlmSettings settings,
+      {required List<LlmChatMessage> messages, int? maxTokens}) async* {
+    throw const LlmApiException('HTTP 500 before first chunk');
+  }
 }
 
 class _ChatOnlyRepo extends LlmRepository {

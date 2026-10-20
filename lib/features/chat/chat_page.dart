@@ -284,7 +284,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final engine = ref.read(ragChatEngineProvider);
     if (engine == null) return;
 
-    setState(() => _error = null);
+    // Claim the turn SYNCHRONOUSLY, before any await: two rapid sends both
+    // reach `_send()` with a stale button otherwise, and both would pass
+    // the `_busy` check above — double sessions, double user rows. Stays
+    // true through the turn until the deltas onDone/onError reset it; the
+    // catch below resets it on the pre-stream failure paths.
+    setState(() {
+      _error = null;
+      _busy = true;
+    });
     var sessionId = _sessionId;
     try {
       if (sessionId == null) {
@@ -295,9 +303,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       }
       final turn = await engine.send(
           sessionId: sessionId, question: question, language: language);
+      // Disposed mid-send: no listener can attach to [turn.deltas]; bail
+      // instead of crashing (FlutterError escapes `on Exception catch`).
+      if (!mounted) return;
       _input.clear();
       setState(() {
-        _busy = true;
         _pending = StringBuffer();
       });
       _deltaSub?.cancel();
@@ -324,7 +334,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       );
     } on Exception catch (e) {
       if (!mounted) return;
-      setState(() => _error = llmErrorMessage(l10n, e));
+      setState(() {
+        _busy = false;
+        _error = llmErrorMessage(l10n, e);
+      });
     }
   }
 

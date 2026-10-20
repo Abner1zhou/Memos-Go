@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:drift/native.dart';
@@ -41,6 +42,20 @@ class _FakeRepo extends LlmRepository {
   }
 }
 
+/// chatStream parks on a completer gate so a turn can be held mid-flight:
+/// lets the test observe the busy window between tap and first chunk.
+class _SlowSendRepo extends _FakeRepo {
+  _SlowSendRepo(this.gate);
+  final Completer<void> gate;
+
+  @override
+  Stream<String> chatStream(LlmSettings settings,
+      {required List<LlmChatMessage> messages, int? maxTokens}) async* {
+    await gate.future;
+    yield '慢回答 [1]。';
+  }
+}
+
 class _StubAuthNotifier extends AuthNotifier {
   @override
   AuthState build() => AuthState(
@@ -80,7 +95,8 @@ void main() {
     await db.close();
   });
 
-  Future<void> pumpPage(WidgetTester tester) async {
+  Future<void> pumpPage(WidgetTester tester, {LlmRepository? repo}) async {
+    final chatRepo = repo ?? _FakeRepo();
     final router = GoRouter(
       initialLocation: '/chat',
       routes: [
@@ -106,14 +122,14 @@ void main() {
         appDatabaseProvider.overrideWithValue(db),
         syncEngineProvider.overrideWithValue(null),
         vectorizationEngineProvider.overrideWithValue(null),
-        llmRepositoryProvider.overrideWith((ref) => _FakeRepo()),
+        llmRepositoryProvider.overrideWith((ref) => chatRepo),
         retrievalServiceProvider.overrideWith(
-            (ref) => RetrievalService(db: db, repository: _FakeRepo())),
+            (ref) => RetrievalService(db: db, repository: chatRepo)),
         ragChatEngineProvider.overrideWith((ref) => RagChatEngine(
             accountId: testAccount.id,
             db: db,
-            repository: _FakeRepo(),
-            retrieval: RetrievalService(db: db, repository: _FakeRepo()))),
+            repository: chatRepo,
+            retrieval: RetrievalService(db: db, repository: chatRepo))),
       ],
       child: MaterialApp.router(
         locale: const Locale('zh'),
@@ -152,6 +168,54 @@ void main() {
     final messages = await tester
         .runAsync(() => db.chatDao.lastMessages(testAccount.id, sessions!.first.id, 10));
     expect(messages!.map((m) => m.role), ['user', 'assistant']);
+  });
+
+  testWidgets('double-tap during a slow send persists a single user turn',
+      (tester) async {
+    final gate = Completer<void>();
+    await pumpPage(tester, repo: _SlowSendRepo(gate));
+
+    await tester.enterText(find.byType(TextField), '方案怎么想');
+    // Two taps with no pump in between: both reach _send() while the send
+    // button still carries the stale enabled callback. The synchronous
+    // `_busy` claim must turn the second call into a no-op.
+    await tester.tap(find.byIcon(Icons.send_rounded));
+    await tester.tap(find.byIcon(Icons.send_rounded));
+    await tester.pump();
+
+    final sendButton = tester.widget<IconButton>(
+        find.widgetWithIcon(IconButton, Icons.send_rounded));
+    expect(sendButton.onPressed, isNull);
+
+    // Real-loop yield so the retrieval isolate result lands and the user
+    // row is appended while chatStream still parks on the gate (same
+    // trick as the streaming test above — NOT pumpAndSettle: the pending
+    // spinner would spin forever with the gate closed).
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await tester.pump();
+
+    final sessions = await tester
+        .runAsync(() => db.chatDao.watchSessions(testAccount.id).first);
+    expect(sessions, hasLength(1)); // 双击不产生第二个会话
+    final messages = await tester.runAsync(
+        () => db.chatDao.lastMessages(testAccount.id, sessions!.first.id, 10));
+    expect(messages!.where((m) => m.role == 'user'), hasLength(1));
+    expect(messages.where((m) => m.role == 'assistant'), isEmpty);
+
+    // Deterministic drain: release the gate, yield the real loop so the
+    // isolate work is fully parked, then pumpAndSettle flushes the
+    // test-zone chain (gate continuation → persist → deltas onDone) —
+    // the spinner is gone by then, so settling terminates.
+    gate.complete();
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('慢回答'), findsWidgets);
+    final finalMessages = await tester.runAsync(
+        () => db.chatDao.lastMessages(testAccount.id, sessions!.first.id, 10));
+    expect(finalMessages!.map((m) => m.role), ['user', 'assistant']);
   });
 
   testWidgets('unconfigured shows the setup affordance', (tester) async {

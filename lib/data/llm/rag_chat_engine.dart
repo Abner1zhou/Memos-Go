@@ -31,6 +31,12 @@ class RagChatEngine {
   static const excerptChars = 400;
   static const historyMessages = 8;
 
+  /// Per-message cap on the history that rides back into the prompt
+  /// (spec §6 上下文 token 上限): the [historyMessages] window bounds how
+  /// many messages return, this bounds how big any one of them can be, so
+  /// one giant answer can't re-enter the context verbatim.
+  static const historyClipChars = 1000;
+
   final String accountId;
   final AppDatabase _db;
   final LlmRepository _repository;
@@ -69,7 +75,13 @@ class RagChatEngine {
 
     final messages = <LlmChatMessage>[
       LlmChatMessage(role: 'system', content: _systemPrompt(language)),
-      ...history.map((m) => LlmChatMessage(role: m.role, content: m.content)),
+      ...history.map((m) => LlmChatMessage(
+          role: m.role,
+          // Same clip style as excerpts: the window bounds count, this
+          // bounds per-message size (see [historyClipChars]).
+          content: m.content.length <= historyClipChars
+              ? m.content
+              : '${m.content.substring(0, historyClipChars)}…')),
       LlmChatMessage(
           role: 'user', content: _userPrompt(question, hits, language)),
     ];
