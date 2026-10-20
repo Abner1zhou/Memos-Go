@@ -1148,6 +1148,24 @@ abstract class AppLocalizations {
   /// **'保存笔记后自动建议标签与相关记忆，在详情页查看'**
   String get llmSuggestOnSaveSubtitle;
 
+  /// No description provided for @suggestTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 建议'**
+  String get suggestTitle;
+
+  /// No description provided for @suggestRelated.
+  ///
+  /// In zh, this message translates to:
+  /// **'相关记忆'**
+  String get suggestRelated;
+
+  /// No description provided for @suggestTagAdded.
+  ///
+  /// In zh, this message translates to:
+  /// **'已添加 #{tag}'**
+  String suggestTagAdded(Object tag);
+
   /// No description provided for @voiceInput.
   ///
   /// In zh, this message translates to:

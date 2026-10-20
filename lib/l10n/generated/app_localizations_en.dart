@@ -571,6 +571,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Suggest tags and related memos after saving; shown on the memo detail page';
 
   @override
+  String get suggestTitle => 'AI suggestions';
+
+  @override
+  String get suggestRelated => 'Related memos';
+
+  @override
+  String suggestTagAdded(Object tag) {
+    return 'Added #$tag';
+  }
+
+  @override
   String get voiceInput => 'Voice input';
 
   @override

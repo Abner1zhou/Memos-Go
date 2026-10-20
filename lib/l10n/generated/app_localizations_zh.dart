@@ -554,6 +554,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get llmSuggestOnSaveSubtitle => '保存笔记后自动建议标签与相关记忆，在详情页查看';
 
   @override
+  String get suggestTitle => 'AI 建议';
+
+  @override
+  String get suggestRelated => '相关记忆';
+
+  @override
+  String suggestTagAdded(Object tag) {
+    return '已添加 #$tag';
+  }
+
+  @override
   String get voiceInput => '语音输入';
 
   @override
