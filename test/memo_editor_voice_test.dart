@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:memos_go/data/models/models.dart';
 import 'package:memos_go/data/repositories/auth_repository.dart';
@@ -8,6 +10,8 @@ import 'package:memos_go/features/memo_editor/memo_editor_page.dart';
 import 'package:memos_go/l10n/generated/app_localizations.dart';
 import 'package:memos_go/providers/auth_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'fake_secure_storage.dart';
 
 class _FakeMemoRepository extends MemoRepository {
   _FakeMemoRepository()
@@ -43,6 +47,13 @@ class _FakeMemoRepository extends MemoRepository {
 void main() {
   testWidgets('mic button shows setup dialog when ASR is not configured',
       (tester) async {
+    // Empty secure storage, explicitly mocked: the voice flow now waits
+    // for the provider's async hydration, which never settles against an
+    // unmocked platform channel.
+    FlutterSecureStoragePlatform.instance = FakeSecureStorage();
+    addTearDown(() => FlutterSecureStoragePlatform.instance =
+        MethodChannelFlutterSecureStorage());
+
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(ProviderScope(
       overrides: [
@@ -60,10 +71,53 @@ void main() {
     expect(find.byIcon(Icons.mic_none_rounded), findsOneWidget);
     await tester.tap(find.byIcon(Icons.mic_none_rounded));
     await tester.pump();
+    await tester.pump();
 
     expect(find.text('未配置语音识别'), findsOneWidget);
     expect(find.text('去设置'), findsOneWidget);
     expect(find.text('取消'), findsOneWidget);
+  });
+
+  // Regression: the provider hydrates from storage asynchronously, and a
+  // one-shot read at the entry point used to see the optimistic defaults
+  // even though storage held a valid config — false "not configured".
+  testWidgets('mic button uses the stored ASR config on a cold start',
+      (tester) async {
+    FlutterSecureStoragePlatform.instance = FakeSecureStorage()
+      ..values['memos_go.asrConfig'] =
+          '{"dialect":"openai","baseUrl":"https://x/v1","apiKey":"k",'
+          '"model":"m","language":"","keepAudio":true}';
+    addTearDown(() => FlutterSecureStoragePlatform.instance =
+        MethodChannelFlutterSecureStorage());
+    // Deny mic permission so the flow stops right after the config check
+    // instead of opening a recording sheet.
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('com.llfbandit.record/messages'),
+      (call) async => false,
+    );
+
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        memoRepositoryProvider.overrideWith((ref) => _FakeMemoRepository()),
+      ],
+      child: MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const MemoEditorPage(),
+      ),
+    ));
+    await tester.pump();
+
+    await tester.tap(find.byIcon(Icons.mic_none_rounded));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('未配置语音识别'), findsNothing);
+    expect(find.text('未授予麦克风权限'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   // Regression: a never-focused TextField has an invalid (-1) selection.
