@@ -1118,12 +1118,6 @@ abstract class AppLocalizations {
   /// **'向你的记忆提问，AI 会引用相关笔记作答'**
   String get chatEmpty;
 
-  /// No description provided for @chatSources.
-  ///
-  /// In zh, this message translates to:
-  /// **'引用'**
-  String get chatSources;
-
   /// No description provided for @chatDeleteSessionConfirm.
   ///
   /// In zh, this message translates to:
@@ -1141,6 +1135,36 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'去配置'**
   String get chatGoConfig;
+
+  /// No description provided for @llmSuggestOnSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存时建议'**
+  String get llmSuggestOnSave;
+
+  /// No description provided for @llmSuggestOnSaveSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存笔记后自动建议标签与相关记忆，在详情页查看'**
+  String get llmSuggestOnSaveSubtitle;
+
+  /// No description provided for @suggestTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 建议'**
+  String get suggestTitle;
+
+  /// No description provided for @suggestRelated.
+  ///
+  /// In zh, this message translates to:
+  /// **'相关记忆'**
+  String get suggestRelated;
+
+  /// No description provided for @suggestTagAdded.
+  ///
+  /// In zh, this message translates to:
+  /// **'已添加 #{tag}'**
+  String suggestTagAdded(Object tag);
 
   /// No description provided for @voiceInput.
   ///

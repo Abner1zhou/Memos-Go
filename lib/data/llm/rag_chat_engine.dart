@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../../core/utils/text_clip.dart';
 import '../api/llm_api.dart';
 import '../local/app_database.dart';
 import '../local/chat_dao.dart';
@@ -70,7 +71,7 @@ class RagChatEngine {
             // citation tap strips the prefix for navigation.
             n: i + 1,
             uid: hits[i].record.memo.name,
-            excerpt: _clip(hits[i].record.memo.content)),
+            excerpt: clipText(hits[i].record.memo.content, excerptChars)),
     ];
 
     final messages = <LlmChatMessage>[
@@ -79,9 +80,7 @@ class RagChatEngine {
           role: m.role,
           // Same clip style as excerpts: the window bounds count, this
           // bounds per-message size (see [historyClipChars]).
-          content: m.content.length <= historyClipChars
-              ? m.content
-              : '${m.content.substring(0, historyClipChars)}…')),
+          content: clipText(m.content, historyClipChars))),
       LlmChatMessage(
           role: 'user', content: _userPrompt(question, hits, language)),
     ];
@@ -134,11 +133,6 @@ class RagChatEngine {
     return RagChatTurn(sources: sources, deltas: controller.stream);
   }
 
-  static String _clip(String content) {
-    final c = content.trim();
-    return c.length <= excerptChars ? c : '${c.substring(0, excerptChars)}…';
-  }
-
   static String _systemPrompt(String language) => language == 'en'
       ? 'You are a warm journaling assistant answering ONLY from the '
           'numbered memories quoted in the user message. Do not invent '
@@ -151,6 +145,9 @@ class RagChatEngine {
 
   static String _userPrompt(
       String question, List<ScoredMemo> hits, String language) {
+    // The question rides into every prompt; give it the same per-message
+    // budget as history so a giant paste can't blow the context either.
+    final q = clipText(question, historyClipChars);
     final b = StringBuffer();
     if (hits.isEmpty) {
       b.writeln(language == 'en'
@@ -166,11 +163,11 @@ class RagChatEngine {
             : '${created.year}-${created.month.toString().padLeft(2, '0')}-${created.day.toString().padLeft(2, '0')}';
         final tags = memo.tags.isEmpty ? '' : ' #${memo.tags.join(' #')}';
         b.writeln('[${i + 1}] $date$tags');
-        b.writeln(_clip(memo.content));
+        b.writeln(clipText(memo.content, excerptChars));
       }
     }
     b.writeln();
-    b.writeln(language == 'en' ? 'Question: $question' : '问题：$question');
+    b.writeln(language == 'en' ? 'Question: $q' : '问题：$q');
     return b.toString();
   }
 }

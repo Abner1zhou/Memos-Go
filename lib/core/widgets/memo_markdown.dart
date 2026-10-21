@@ -27,10 +27,11 @@ class MemoMarkdown extends StatelessWidget {
   static final RegExp _tagInCode = RegExp(r'```[\s\S]*?```|`[^`\n]*`');
   static final RegExp _tagPattern = RegExp(r'(^|[\s(])#([^\s#),.；。，、]+)');
 
-  /// Existing markdown links (inline `[text](url)` and reference
-  /// `[text][ref]`) that the cite rewrite must not corrupt.
-  static final RegExp _mdLink =
-      RegExp(r'\[[^\]]*\]\([^)]*\)|\[[^\]]*\]\[[^\]]*\]');
+  /// Existing markdown links (inline `[text](url)`, reference
+  /// `[text][ref]`) and reference link definitions (`[ref]: url`) that the
+  /// cite rewrite must not corrupt.
+  static final RegExp _mdLink = RegExp(
+      r'\[[^\]]*\]\([^)]*\)|\[[^\]]*\]\[[^\]]*\]|\[[^\]]*\]:[ \t]*\S+');
 
   /// Replaces every [pattern] match with a `sentinel<index>sentinel`
   /// placeholder, remembering the originals in [store] in order. Pair with

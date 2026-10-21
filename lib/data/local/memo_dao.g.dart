@@ -12,6 +12,7 @@ mixin _$MemoDaoMixin on DatabaseAccessor<AppDatabase> {
   $MemoEmbeddingsTable get memoEmbeddings => attachedDatabase.memoEmbeddings;
   $ChatSessionsTable get chatSessions => attachedDatabase.chatSessions;
   $ChatMessagesTable get chatMessages => attachedDatabase.chatMessages;
+  $MemoSuggestionsTable get memoSuggestions => attachedDatabase.memoSuggestions;
   MemoDaoManager get managers => MemoDaoManager(this);
 }
 
@@ -38,4 +39,9 @@ class MemoDaoManager {
       $$ChatSessionsTableTableManager(_db.attachedDatabase, _db.chatSessions);
   $$ChatMessagesTableTableManager get chatMessages =>
       $$ChatMessagesTableTableManager(_db.attachedDatabase, _db.chatMessages);
+  $$MemoSuggestionsTableTableManager get memoSuggestions =>
+      $$MemoSuggestionsTableTableManager(
+        _db.attachedDatabase,
+        _db.memoSuggestions,
+      );
 }

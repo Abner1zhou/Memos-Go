@@ -14,6 +14,7 @@ import '../../data/repositories/memo_repository.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/memo_providers.dart';
 import '../../providers/sync_providers.dart';
+import 'memo_suggestion_section.dart';
 
 /// Read-only memo detail with actions (edit / pin / delete / comment count).
 class MemoDetailPage extends ConsumerStatefulWidget {
@@ -164,6 +165,7 @@ class _MemoDetailPageState extends ConsumerState<MemoDetailPage> {
                           ],
                         ),
                       ],
+                      MemoSuggestionSection(memo: _memo!),
                     ],
                   ),
                 ),

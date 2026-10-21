@@ -38,6 +38,7 @@ dependencies:
   # Content rendering
   flutter_markdown: ^0.7.7
   markdown: ^7.2.2
+  characters: ^1.4.0
 
   # Media
   image_picker: ^1.1.2

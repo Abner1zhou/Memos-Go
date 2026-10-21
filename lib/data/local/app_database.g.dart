@@ -3018,6 +3018,438 @@ class ChatMessagesCompanion extends UpdateCompanion<ChatMessagesRow> {
   }
 }
 
+class $MemoSuggestionsTable extends MemoSuggestions
+    with TableInfo<$MemoSuggestionsTable, MemoSuggestionsRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MemoSuggestionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
+  @override
+  late final GeneratedColumn<String> accountId = GeneratedColumn<String>(
+    'account_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _memoUidMeta = const VerificationMeta(
+    'memoUid',
+  );
+  @override
+  late final GeneratedColumn<String> memoUid = GeneratedColumn<String>(
+    'memo_uid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentHashMeta = const VerificationMeta(
+    'contentHash',
+  );
+  @override
+  late final GeneratedColumn<int> contentHash = GeneratedColumn<int>(
+    'content_hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tagsJsonMeta = const VerificationMeta(
+    'tagsJson',
+  );
+  @override
+  late final GeneratedColumn<String> tagsJson = GeneratedColumn<String>(
+    'tags_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _relatedUidsJsonMeta = const VerificationMeta(
+    'relatedUidsJson',
+  );
+  @override
+  late final GeneratedColumn<String> relatedUidsJson = GeneratedColumn<String>(
+    'related_uids_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    accountId,
+    memoUid,
+    contentHash,
+    tagsJson,
+    relatedUidsJson,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'memo_suggestions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MemoSuggestionsRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('account_id')) {
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['account_id']!, _accountIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_accountIdMeta);
+    }
+    if (data.containsKey('memo_uid')) {
+      context.handle(
+        _memoUidMeta,
+        memoUid.isAcceptableOrUnknown(data['memo_uid']!, _memoUidMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_memoUidMeta);
+    }
+    if (data.containsKey('content_hash')) {
+      context.handle(
+        _contentHashMeta,
+        contentHash.isAcceptableOrUnknown(
+          data['content_hash']!,
+          _contentHashMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentHashMeta);
+    }
+    if (data.containsKey('tags_json')) {
+      context.handle(
+        _tagsJsonMeta,
+        tagsJson.isAcceptableOrUnknown(data['tags_json']!, _tagsJsonMeta),
+      );
+    }
+    if (data.containsKey('related_uids_json')) {
+      context.handle(
+        _relatedUidsJsonMeta,
+        relatedUidsJson.isAcceptableOrUnknown(
+          data['related_uids_json']!,
+          _relatedUidsJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {accountId, memoUid};
+  @override
+  MemoSuggestionsRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MemoSuggestionsRow(
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}account_id'],
+      )!,
+      memoUid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}memo_uid'],
+      )!,
+      contentHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}content_hash'],
+      )!,
+      tagsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tags_json'],
+      )!,
+      relatedUidsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}related_uids_json'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $MemoSuggestionsTable createAlias(String alias) {
+    return $MemoSuggestionsTable(attachedDatabase, alias);
+  }
+}
+
+class MemoSuggestionsRow extends DataClass
+    implements Insertable<MemoSuggestionsRow> {
+  final String accountId;
+  final String memoUid;
+  final int contentHash;
+
+  /// JSON array of suggested tag strings.
+  final String tagsJson;
+
+  /// JSON array of related memo names (`memos/{uid}`).
+  final String relatedUidsJson;
+  final DateTime createdAt;
+  const MemoSuggestionsRow({
+    required this.accountId,
+    required this.memoUid,
+    required this.contentHash,
+    required this.tagsJson,
+    required this.relatedUidsJson,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['account_id'] = Variable<String>(accountId);
+    map['memo_uid'] = Variable<String>(memoUid);
+    map['content_hash'] = Variable<int>(contentHash);
+    map['tags_json'] = Variable<String>(tagsJson);
+    map['related_uids_json'] = Variable<String>(relatedUidsJson);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  MemoSuggestionsCompanion toCompanion(bool nullToAbsent) {
+    return MemoSuggestionsCompanion(
+      accountId: Value(accountId),
+      memoUid: Value(memoUid),
+      contentHash: Value(contentHash),
+      tagsJson: Value(tagsJson),
+      relatedUidsJson: Value(relatedUidsJson),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory MemoSuggestionsRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MemoSuggestionsRow(
+      accountId: serializer.fromJson<String>(json['accountId']),
+      memoUid: serializer.fromJson<String>(json['memoUid']),
+      contentHash: serializer.fromJson<int>(json['contentHash']),
+      tagsJson: serializer.fromJson<String>(json['tagsJson']),
+      relatedUidsJson: serializer.fromJson<String>(json['relatedUidsJson']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'accountId': serializer.toJson<String>(accountId),
+      'memoUid': serializer.toJson<String>(memoUid),
+      'contentHash': serializer.toJson<int>(contentHash),
+      'tagsJson': serializer.toJson<String>(tagsJson),
+      'relatedUidsJson': serializer.toJson<String>(relatedUidsJson),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  MemoSuggestionsRow copyWith({
+    String? accountId,
+    String? memoUid,
+    int? contentHash,
+    String? tagsJson,
+    String? relatedUidsJson,
+    DateTime? createdAt,
+  }) => MemoSuggestionsRow(
+    accountId: accountId ?? this.accountId,
+    memoUid: memoUid ?? this.memoUid,
+    contentHash: contentHash ?? this.contentHash,
+    tagsJson: tagsJson ?? this.tagsJson,
+    relatedUidsJson: relatedUidsJson ?? this.relatedUidsJson,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  MemoSuggestionsRow copyWithCompanion(MemoSuggestionsCompanion data) {
+    return MemoSuggestionsRow(
+      accountId: data.accountId.present ? data.accountId.value : this.accountId,
+      memoUid: data.memoUid.present ? data.memoUid.value : this.memoUid,
+      contentHash: data.contentHash.present
+          ? data.contentHash.value
+          : this.contentHash,
+      tagsJson: data.tagsJson.present ? data.tagsJson.value : this.tagsJson,
+      relatedUidsJson: data.relatedUidsJson.present
+          ? data.relatedUidsJson.value
+          : this.relatedUidsJson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MemoSuggestionsRow(')
+          ..write('accountId: $accountId, ')
+          ..write('memoUid: $memoUid, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('tagsJson: $tagsJson, ')
+          ..write('relatedUidsJson: $relatedUidsJson, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    accountId,
+    memoUid,
+    contentHash,
+    tagsJson,
+    relatedUidsJson,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MemoSuggestionsRow &&
+          other.accountId == this.accountId &&
+          other.memoUid == this.memoUid &&
+          other.contentHash == this.contentHash &&
+          other.tagsJson == this.tagsJson &&
+          other.relatedUidsJson == this.relatedUidsJson &&
+          other.createdAt == this.createdAt);
+}
+
+class MemoSuggestionsCompanion extends UpdateCompanion<MemoSuggestionsRow> {
+  final Value<String> accountId;
+  final Value<String> memoUid;
+  final Value<int> contentHash;
+  final Value<String> tagsJson;
+  final Value<String> relatedUidsJson;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const MemoSuggestionsCompanion({
+    this.accountId = const Value.absent(),
+    this.memoUid = const Value.absent(),
+    this.contentHash = const Value.absent(),
+    this.tagsJson = const Value.absent(),
+    this.relatedUidsJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MemoSuggestionsCompanion.insert({
+    required String accountId,
+    required String memoUid,
+    required int contentHash,
+    this.tagsJson = const Value.absent(),
+    this.relatedUidsJson = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : accountId = Value(accountId),
+       memoUid = Value(memoUid),
+       contentHash = Value(contentHash),
+       createdAt = Value(createdAt);
+  static Insertable<MemoSuggestionsRow> custom({
+    Expression<String>? accountId,
+    Expression<String>? memoUid,
+    Expression<int>? contentHash,
+    Expression<String>? tagsJson,
+    Expression<String>? relatedUidsJson,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (accountId != null) 'account_id': accountId,
+      if (memoUid != null) 'memo_uid': memoUid,
+      if (contentHash != null) 'content_hash': contentHash,
+      if (tagsJson != null) 'tags_json': tagsJson,
+      if (relatedUidsJson != null) 'related_uids_json': relatedUidsJson,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MemoSuggestionsCompanion copyWith({
+    Value<String>? accountId,
+    Value<String>? memoUid,
+    Value<int>? contentHash,
+    Value<String>? tagsJson,
+    Value<String>? relatedUidsJson,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return MemoSuggestionsCompanion(
+      accountId: accountId ?? this.accountId,
+      memoUid: memoUid ?? this.memoUid,
+      contentHash: contentHash ?? this.contentHash,
+      tagsJson: tagsJson ?? this.tagsJson,
+      relatedUidsJson: relatedUidsJson ?? this.relatedUidsJson,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (accountId.present) {
+      map['account_id'] = Variable<String>(accountId.value);
+    }
+    if (memoUid.present) {
+      map['memo_uid'] = Variable<String>(memoUid.value);
+    }
+    if (contentHash.present) {
+      map['content_hash'] = Variable<int>(contentHash.value);
+    }
+    if (tagsJson.present) {
+      map['tags_json'] = Variable<String>(tagsJson.value);
+    }
+    if (relatedUidsJson.present) {
+      map['related_uids_json'] = Variable<String>(relatedUidsJson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MemoSuggestionsCompanion(')
+          ..write('accountId: $accountId, ')
+          ..write('memoUid: $memoUid, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('tagsJson: $tagsJson, ')
+          ..write('relatedUidsJson: $relatedUidsJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3029,6 +3461,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $MemoEmbeddingsTable memoEmbeddings = $MemoEmbeddingsTable(this);
   late final $ChatSessionsTable chatSessions = $ChatSessionsTable(this);
   late final $ChatMessagesTable chatMessages = $ChatMessagesTable(this);
+  late final $MemoSuggestionsTable memoSuggestions = $MemoSuggestionsTable(
+    this,
+  );
   late final Index idxMemosList = Index(
     'idx_memos_list',
     'CREATE INDEX idx_memos_list ON memos (account_id, state, pinned, create_time)',
@@ -3048,6 +3483,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final MemoDao memoDao = MemoDao(this as AppDatabase);
   late final EmbeddingDao embeddingDao = EmbeddingDao(this as AppDatabase);
   late final ChatDao chatDao = ChatDao(this as AppDatabase);
+  late final SuggestionDao suggestionDao = SuggestionDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3060,6 +3496,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     memoEmbeddings,
     chatSessions,
     chatMessages,
+    memoSuggestions,
     idxMemosList,
     idxMemoTagsTag,
     idxMemoEmbeddingsAccount,
@@ -4659,6 +5096,239 @@ typedef $$ChatMessagesTableProcessedTableManager =
       ChatMessagesRow,
       PrefetchHooks Function()
     >;
+typedef $$MemoSuggestionsTableCreateCompanionBuilder =
+    MemoSuggestionsCompanion Function({
+      required String accountId,
+      required String memoUid,
+      required int contentHash,
+      Value<String> tagsJson,
+      Value<String> relatedUidsJson,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$MemoSuggestionsTableUpdateCompanionBuilder =
+    MemoSuggestionsCompanion Function({
+      Value<String> accountId,
+      Value<String> memoUid,
+      Value<int> contentHash,
+      Value<String> tagsJson,
+      Value<String> relatedUidsJson,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$MemoSuggestionsTableFilterComposer
+    extends Composer<_$AppDatabase, $MemoSuggestionsTable> {
+  $$MemoSuggestionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get accountId => $composableBuilder(
+    column: $table.accountId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get memoUid => $composableBuilder(
+    column: $table.memoUid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tagsJson => $composableBuilder(
+    column: $table.tagsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get relatedUidsJson => $composableBuilder(
+    column: $table.relatedUidsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$MemoSuggestionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $MemoSuggestionsTable> {
+  $$MemoSuggestionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get accountId => $composableBuilder(
+    column: $table.accountId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get memoUid => $composableBuilder(
+    column: $table.memoUid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tagsJson => $composableBuilder(
+    column: $table.tagsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get relatedUidsJson => $composableBuilder(
+    column: $table.relatedUidsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MemoSuggestionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MemoSuggestionsTable> {
+  $$MemoSuggestionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get accountId =>
+      $composableBuilder(column: $table.accountId, builder: (column) => column);
+
+  GeneratedColumn<String> get memoUid =>
+      $composableBuilder(column: $table.memoUid, builder: (column) => column);
+
+  GeneratedColumn<int> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get tagsJson =>
+      $composableBuilder(column: $table.tagsJson, builder: (column) => column);
+
+  GeneratedColumn<String> get relatedUidsJson => $composableBuilder(
+    column: $table.relatedUidsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$MemoSuggestionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MemoSuggestionsTable,
+          MemoSuggestionsRow,
+          $$MemoSuggestionsTableFilterComposer,
+          $$MemoSuggestionsTableOrderingComposer,
+          $$MemoSuggestionsTableAnnotationComposer,
+          $$MemoSuggestionsTableCreateCompanionBuilder,
+          $$MemoSuggestionsTableUpdateCompanionBuilder,
+          (
+            MemoSuggestionsRow,
+            BaseReferences<
+              _$AppDatabase,
+              $MemoSuggestionsTable,
+              MemoSuggestionsRow
+            >,
+          ),
+          MemoSuggestionsRow,
+          PrefetchHooks Function()
+        > {
+  $$MemoSuggestionsTableTableManager(
+    _$AppDatabase db,
+    $MemoSuggestionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MemoSuggestionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MemoSuggestionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MemoSuggestionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> accountId = const Value.absent(),
+                Value<String> memoUid = const Value.absent(),
+                Value<int> contentHash = const Value.absent(),
+                Value<String> tagsJson = const Value.absent(),
+                Value<String> relatedUidsJson = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MemoSuggestionsCompanion(
+                accountId: accountId,
+                memoUid: memoUid,
+                contentHash: contentHash,
+                tagsJson: tagsJson,
+                relatedUidsJson: relatedUidsJson,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String accountId,
+                required String memoUid,
+                required int contentHash,
+                Value<String> tagsJson = const Value.absent(),
+                Value<String> relatedUidsJson = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => MemoSuggestionsCompanion.insert(
+                accountId: accountId,
+                memoUid: memoUid,
+                contentHash: contentHash,
+                tagsJson: tagsJson,
+                relatedUidsJson: relatedUidsJson,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MemoSuggestionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MemoSuggestionsTable,
+      MemoSuggestionsRow,
+      $$MemoSuggestionsTableFilterComposer,
+      $$MemoSuggestionsTableOrderingComposer,
+      $$MemoSuggestionsTableAnnotationComposer,
+      $$MemoSuggestionsTableCreateCompanionBuilder,
+      $$MemoSuggestionsTableUpdateCompanionBuilder,
+      (
+        MemoSuggestionsRow,
+        BaseReferences<
+          _$AppDatabase,
+          $MemoSuggestionsTable,
+          MemoSuggestionsRow
+        >,
+      ),
+      MemoSuggestionsRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4677,4 +5347,6 @@ class $AppDatabaseManager {
       $$ChatSessionsTableTableManager(_db, _db.chatSessions);
   $$ChatMessagesTableTableManager get chatMessages =>
       $$ChatMessagesTableTableManager(_db, _db.chatMessages);
+  $$MemoSuggestionsTableTableManager get memoSuggestions =>
+      $$MemoSuggestionsTableTableManager(_db, _db.memoSuggestions);
 }

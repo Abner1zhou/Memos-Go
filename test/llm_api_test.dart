@@ -387,10 +387,22 @@ void main() {
           messages: const [LlmChatMessage(role: 'user', content: 'hi')]),
       emitsInOrder([
         '早',
-        emitsError(isA<LlmApiException>()),
+        emitsError(isA<LlmApiException>()
+            .having((e) => e.kind, 'kind', LlmErrorKind.unreachable)),
         emitsDone,
       ]),
     );
+  });
+
+  test('raw socket errors mid-stream classify as unreachable', () async {
+    // http_mock_adapter 无法模拟“200 后读到一半掐断连接”——那条路径由上面的
+    // _MidStreamDropAdapter 覆盖。这里直接驱动兜底分类：构造流中途抛
+    // SocketException 一类的原始错误时应归类为 unreachable。
+    expect(kindOfRawError(const SocketException('Connection reset')),
+        LlmErrorKind.unreachable);
+    expect(
+        kindOfRawError(const HttpException('closed')), LlmErrorKind.unreachable);
+    expect(kindOfRawError(StateError('x')), LlmErrorKind.unknown);
   });
 }
 

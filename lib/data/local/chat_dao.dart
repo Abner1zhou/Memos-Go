@@ -1,7 +1,9 @@
 import 'dart:convert' as convert;
 
+import 'package:characters/characters.dart';
 import 'package:drift/drift.dart';
 
+import '../../core/utils/text_clip.dart';
 import 'app_database.dart';
 
 part 'chat_dao.g.dart';
@@ -65,18 +67,6 @@ class ChatDao extends DatabaseAccessor<AppDatabase> with _$ChatDaoMixin {
         accountId: accountId, id: id, title: '', createdAt: now, updatedAt: now);
   }
 
-  Future<void> renameSession(String accountId, String sessionId, String title) =>
-      (update(chatSessions)
-            ..where((s) =>
-                s.accountId.equals(accountId) & s.id.equals(sessionId)))
-          .write(ChatSessionsCompanion(title: Value(title)));
-
-  Future<void> touchSession(String accountId, String sessionId) =>
-      (update(chatSessions)
-            ..where((s) =>
-                s.accountId.equals(accountId) & s.id.equals(sessionId)))
-          .write(ChatSessionsCompanion(updatedAt: Value(DateTime.now())));
-
   Future<void> appendMessage(
     String accountId,
     String sessionId, {
@@ -108,11 +98,15 @@ class ChatDao extends DatabaseAccessor<AppDatabase> with _$ChatDaoMixin {
             .getSingle();
         if (role == 'user' && session.title.isEmpty && content.trim().isNotEmpty) {
           final title = content.trim();
+          // Grapheme-safe 30-char cap: a UTF-16-blind substring could split
+          // a surrogate pair and store a broken emoji in the title.
+          final clipped =
+              title.characters.length > 30 ? clipText(title, 30) : title;
           await (update(chatSessions)
                 ..where((s) =>
                     s.accountId.equals(accountId) & s.id.equals(sessionId)))
               .write(ChatSessionsCompanion(
-                  title: Value(title.length > 30 ? title.substring(0, 30) : title),
+                  title: Value(clipped),
                   updatedAt: Value(now)));
         } else {
           await (update(chatSessions)
@@ -152,16 +146,6 @@ class ChatDao extends DatabaseAccessor<AppDatabase> with _$ChatDaoMixin {
         await (delete(chatSessions)
               ..where((s) =>
                   s.accountId.equals(accountId) & s.id.equals(sessionId)))
-            .go();
-      });
-
-  Future<void> deleteAllForAccount(String accountId) =>
-      transaction(() async {
-        await (delete(chatMessages)
-              ..where((m) => m.accountId.equals(accountId)))
-            .go();
-        await (delete(chatSessions)
-              ..where((s) => s.accountId.equals(accountId)))
             .go();
       });
 }

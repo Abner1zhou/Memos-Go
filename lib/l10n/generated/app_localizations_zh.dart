@@ -539,9 +539,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatEmpty => '向你的记忆提问，AI 会引用相关笔记作答';
 
   @override
-  String get chatSources => '引用';
-
-  @override
   String get chatDeleteSessionConfirm => '删除这个会话？';
 
   @override
@@ -549,6 +546,23 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatGoConfig => '去配置';
+
+  @override
+  String get llmSuggestOnSave => '保存时建议';
+
+  @override
+  String get llmSuggestOnSaveSubtitle => '保存笔记后自动建议标签与相关记忆，在详情页查看';
+
+  @override
+  String get suggestTitle => 'AI 建议';
+
+  @override
+  String get suggestRelated => '相关记忆';
+
+  @override
+  String suggestTagAdded(Object tag) {
+    return '已添加 #$tag';
+  }
 
   @override
   String get voiceInput => '语音输入';

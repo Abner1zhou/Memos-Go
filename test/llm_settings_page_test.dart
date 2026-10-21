@@ -155,6 +155,10 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
+    // The suggest-on-save switch grew the form; the semantic section sits
+    // below the test viewport until the list is scrolled.
+    await tester.dragUntilVisible(
+        find.text('语义搜索'), find.byType(ListView), const Offset(0, -100));
     expect(find.text('语义搜索'), findsOneWidget);
     expect(find.textContaining('向量化会将笔记内容发送'), findsOneWidget);
   });

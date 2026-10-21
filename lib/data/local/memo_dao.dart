@@ -24,6 +24,7 @@ class MemoSlice {
   MemoEmbeddings,
   ChatSessions,
   ChatMessages,
+  MemoSuggestions,
 ])
 class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
   MemoDao(super.db);
@@ -344,6 +345,9 @@ class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
         await (delete(memoEmbeddings)..where((e) =>
                 e.accountId.equals(accountId) &
                 e.memoUid.isNotInQuery(remainingEmbeddings))).go();
+        await (delete(memoSuggestions)..where((s) =>
+                s.accountId.equals(accountId) &
+                s.memoUid.isNotInQuery(remaining))).go();
       });
 
   /// Removes all local data of an account (called on account removal).
@@ -364,6 +368,9 @@ class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
               ..where((m) => m.accountId.equals(accountId)))
             .go();
         await (delete(chatSessions)
+              ..where((s) => s.accountId.equals(accountId)))
+            .go();
+        await (delete(memoSuggestions)
               ..where((s) => s.accountId.equals(accountId)))
             .go();
       });
@@ -387,6 +394,10 @@ class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
         await (delete(memoEmbeddings)
               ..where((e) =>
                   e.accountId.equals(accountId) & e.memoUid.equals(uid)))
+            .go();
+        await (delete(memoSuggestions)
+              ..where((s) =>
+                  s.accountId.equals(accountId) & s.memoUid.equals(uid)))
             .go();
       });
 

@@ -13,6 +13,7 @@ class LlmSettings {
     this.apiKey = '',
     this.chatModel = '',
     this.embeddingModel = '',
+    this.suggestOnSave = true,
   });
 
   /// OpenAI-compatible endpoint base, e.g. `https://api.deepseek.com/v1`.
@@ -22,6 +23,9 @@ class LlmSettings {
 
   /// Optional for P1; required once P2 (vector search) lands.
   final String embeddingModel;
+
+  /// Whether saving a memo should trigger tag/related-memo suggestions.
+  final bool suggestOnSave;
 
   bool get isConfigured =>
       baseUrl.trim().isNotEmpty &&
@@ -36,12 +40,14 @@ class LlmSettings {
     String? apiKey,
     String? chatModel,
     String? embeddingModel,
+    bool? suggestOnSave,
   }) =>
       LlmSettings(
         baseUrl: baseUrl ?? this.baseUrl,
         apiKey: apiKey ?? this.apiKey,
         chatModel: chatModel ?? this.chatModel,
         embeddingModel: embeddingModel ?? this.embeddingModel,
+        suggestOnSave: suggestOnSave ?? this.suggestOnSave,
       );
 
   Map<String, dynamic> toJson() => {
@@ -49,6 +55,7 @@ class LlmSettings {
         'apiKey': apiKey,
         'chatModel': chatModel,
         'embeddingModel': embeddingModel,
+        'suggestOnSave': suggestOnSave,
       };
 
   /// Tolerates non-string fields: they coerce to '' instead of throwing, so
@@ -60,6 +67,8 @@ class LlmSettings {
         apiKey: _asString(json['apiKey']),
         chatModel: _asString(json['chatModel']),
         embeddingModel: _asString(json['embeddingModel']),
+        suggestOnSave:
+            json['suggestOnSave'] is bool ? json['suggestOnSave'] as bool : true,
       );
 }
 

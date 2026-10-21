@@ -3,6 +3,7 @@ import 'dart:convert' as convert;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/utils/stable_hash.dart';
+import '../../core/utils/text_clip.dart';
 import '../../data/models/models.dart';
 
 /// Token guardrails: each memo is clipped and each group capped before the
@@ -67,7 +68,7 @@ String buildReviewDigestUserPrompt(
   }
   var i = 0;
   for (final memo in input.today.take(_maxMemosPerGroup)) {
-    b.writeln('${++i}. ${_clip(memo.content)}');
+    b.writeln('${++i}. ${clipText(memo.content, _maxCharsPerMemo)}');
   }
   if (input.onThisDay.isNotEmpty) {
     if (language == 'en') {
@@ -79,16 +80,11 @@ String buildReviewDigestUserPrompt(
       ..sort((a, b) => b.compareTo(a));
     for (final year in years) {
       for (final memo in input.onThisDay[year]!.take(_maxMemosPerGroup)) {
-        b.writeln('- [$year] ${_clip(memo.content)}');
+        b.writeln('- [$year] ${clipText(memo.content, _maxCharsPerMemo)}');
       }
     }
   }
   return b.toString();
-}
-
-String _clip(String content) {
-  final c = content.trim();
-  return c.length <= _maxCharsPerMemo ? c : '${c.substring(0, _maxCharsPerMemo)}…';
 }
 
 /// One cached digest for a given local day.

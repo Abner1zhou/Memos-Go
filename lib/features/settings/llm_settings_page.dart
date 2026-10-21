@@ -26,6 +26,7 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
   final _embeddingModelController = TextEditingController();
 
   var _busy = false;
+  var _suggestOnSave = true;
   String? _error;
 
   @override
@@ -38,6 +39,7 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
       _apiKeyController.text = settings.apiKey;
       _chatModelController.text = settings.chatModel;
       _embeddingModelController.text = settings.embeddingModel;
+      setState(() => _suggestOnSave = settings.suggestOnSave);
     });
   }
 
@@ -55,6 +57,7 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
         apiKey: _apiKeyController.text.trim(),
         chatModel: _chatModelController.text.trim(),
         embeddingModel: _embeddingModelController.text.trim(),
+        suggestOnSave: _suggestOnSave,
       );
 
   /// Returns the settings to persist, or null (with `_error` set) when the
@@ -143,6 +146,7 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
       _apiKeyController.clear();
       _chatModelController.clear();
       _embeddingModelController.clear();
+      _suggestOnSave = true;
       _error = null;
     });
   }
@@ -227,6 +231,13 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
               hintText: l10n.llmEmbeddingModelHint,
               prefixIcon: const Icon(Icons.blur_on_outlined),
             ),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _suggestOnSave,
+            onChanged: (v) => setState(() => _suggestOnSave = v),
+            title: Text(l10n.llmSuggestOnSave),
+            subtitle: Text(l10n.llmSuggestOnSaveSubtitle),
           ),
           if (_error != null) ...[
             const SizedBox(height: 4),

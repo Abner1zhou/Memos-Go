@@ -554,9 +554,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Ask your memories a question; the AI answers with citations';
 
   @override
-  String get chatSources => 'Sources';
-
-  @override
   String get chatDeleteSessionConfirm => 'Delete this conversation?';
 
   @override
@@ -565,6 +562,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatGoConfig => 'Set up';
+
+  @override
+  String get llmSuggestOnSave => 'Suggest on save';
+
+  @override
+  String get llmSuggestOnSaveSubtitle =>
+      'Suggest tags and related memos after saving; shown on the memo detail page';
+
+  @override
+  String get suggestTitle => 'AI suggestions';
+
+  @override
+  String get suggestRelated => 'Related memos';
+
+  @override
+  String suggestTagAdded(Object tag) {
+    return 'Added #$tag';
+  }
 
   @override
   String get voiceInput => 'Voice input';

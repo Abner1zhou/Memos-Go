@@ -67,6 +67,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     });
   }
 
+  /// 流式期间贴底（构建完成后滚动；用户上翻超过一屏则不打扰）。
+  /// 距底判定在调度时刻做（本帧内容尚未增长）：一次到达的多块不会被
+  /// 误判成“用户已离底一屏”而永远不跟随。
+  void _scheduleAutoScroll() {
+    if (_scroll.hasClients) {
+      final position = _scroll.position;
+      final away = position.maxScrollExtent - position.pixels >
+          position.viewportDimension;
+      if (away) return; // 用户主动上翻浏览历史时不打扰
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      _scroll.animateTo(_scroll.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 120), curve: Curves.easeOut);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -298,6 +315,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (sessionId == null) {
         final session = await _chatDao.createSession(_accountId);
         sessionId = session.id;
+        // 会话已建但页面已卸载：引擎侧无人消费也无害，直接退出。
+        if (!mounted) return;
         setState(() => _sessionId = sessionId);
         _subscribeMessages(sessionId);
       }
@@ -315,6 +334,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         (chunk) {
           _pending?.write(chunk);
           if (mounted) setState(() {});
+          _scheduleAutoScroll();
         },
         onDone: () {
           if (!mounted) return;
@@ -406,7 +426,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                             await _chatDao.deleteSession(accountId, session.id);
                             if (!mounted) return;
                             if (_sessionId == session.id) {
-                              setState(() => _sessionId = null);
+                              // 在途流式回答随会话一起作废：先断开订阅，
+                              // 避免已置空的会话上继续收 chunk / 触发滚动。
+                              _deltaSub?.cancel();
+                              _deltaSub = null;
+                              // 取消后 onDone/onError 不再触发，流式状态
+                              // （_busy/_pending）须在此一并复位，否则发送
+                              // 按钮永久禁用、幽灵气泡残留。
+                              setState(() {
+                                _busy = false;
+                                _pending = null;
+                                _sessionId = null;
+                              });
                               _messagesSub?.cancel();
                               _messagesSub = null;
                               setState(() => _messages = const []);
