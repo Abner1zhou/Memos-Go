@@ -141,4 +141,15 @@ class EmbeddingDao extends DatabaseAccessor<AppDatabase>
       (delete(memoEmbeddings)
             ..where((e) => e.accountId.equals(accountId)))
           .go();
+
+  /// Drops embedding rows for [uids] (any model). Blank memos are skipped
+  /// by the engine but still match [corpus], so a stale vector would
+  /// otherwise survive [deleteOrphans].
+  Future<void> deleteForUids(String accountId, List<String> uids) async {
+    if (uids.isEmpty) return;
+    await (delete(memoEmbeddings)
+          ..where((e) =>
+              e.accountId.equals(accountId) & e.memoUid.isIn(uids)))
+        .go();
+  }
 }

@@ -506,6 +506,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String vecLastError(Object error) {
+    return '向量化出错：$error';
+  }
+
+  @override
   String get vecPause => '暂停';
 
   @override

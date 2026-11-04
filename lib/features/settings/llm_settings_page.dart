@@ -180,6 +180,11 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
     final configured = ref.watch(llmProvider).isConfigured;
     final engine = ref.watch(vectorizationEngineProvider);
     final vec = ref.watch(vectorizationStateProvider).value;
+    final vecError = vec?.lastError;
+    // Pause stops a running pass. An error means it already stopped;
+    // Resume retries the memos that are still missing.
+    final vecStalled = vec?.status == VectorStatus.paused ||
+        vec?.status == VectorStatus.error;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.llmSettingsTitle)),
@@ -288,15 +293,20 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
               Text(l10n.vecProgress(vec.embedded, vec.total),
                   style: theme.textTheme.bodySmall),
             ],
+            if (vecError != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                l10n.vecLastError(vecError),
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.error),
+              ),
+            ],
             const SizedBox(height: 4),
             Row(children: [
               TextButton(
-                onPressed: () => vec?.status == VectorStatus.paused
-                    ? engine?.resume()
-                    : engine?.pause(),
-                child: Text(vec?.status == VectorStatus.paused
-                    ? l10n.vecResume
-                    : l10n.vecPause),
+                onPressed: () =>
+                    vecStalled ? engine?.resume() : engine?.pause(),
+                child: Text(vecStalled ? l10n.vecResume : l10n.vecPause),
               ),
               TextButton(
                 onPressed: () => _clearVectors(context, engine),
