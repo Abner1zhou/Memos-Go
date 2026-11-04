@@ -26,10 +26,42 @@ class FakeVectorRepository extends LlmRepository {
   @override
   Future<List<List<double>>> embeddings(LlmSettings s,
       {required List<String> inputs}) async {
+    batches.add(inputs);
     final failure = failWith;
     if (failure != null) throw LlmApiException(failure);
-    batches.add(inputs);
     return [for (final text in inputs) [text.length.toDouble(), 1.0]];
+  }
+}
+
+/// Batch calls fail so the engine isolates memos; [bad] then fails alone.
+class _OneBadMemoRepository extends FakeVectorRepository {
+  _OneBadMemoRepository(super.settings);
+
+  static const bad = 'bad memo';
+
+  @override
+  Future<List<List<double>>> embeddings(LlmSettings s,
+      {required List<String> inputs}) async {
+    batches.add(inputs);
+    if (inputs.length > 1 || inputs.single == bad) {
+      throw LlmApiException(
+          inputs.length > 1 ? 'batch rejected' : 'rejected bad memo');
+    }
+    return [for (final text in inputs) [text.length.toDouble(), 1.0]];
+  }
+}
+
+/// Fails every call with an error that should stop the pass immediately.
+class _SystemicFailureRepository extends FakeVectorRepository {
+  _SystemicFailureRepository(super.settings, this.error);
+
+  final LlmApiException error;
+
+  @override
+  Future<List<List<double>>> embeddings(LlmSettings s,
+      {required List<String> inputs}) async {
+    batches.add(inputs);
+    throw error;
   }
 }
 
@@ -235,6 +267,101 @@ void main() {
 
     expect(e.state.value.status, VectorStatus.error);
     expect(e.state.value.lastError, contains('keychain exploded'));
+  });
+
+  test('clips oversized memo text and skips blank input', () async {
+    final long = '字' * (VectorizationEngine.maxInputChars + 25);
+    await db.memoDao.upsertLocalMemo('acc-1', memo('long', long));
+    await db.memoDao.upsertLocalMemo('acc-1', memo('blank', ' \n\t '));
+    await db.memoDao.upsertLocalMemo('acc-1', memo('ok', '  hello '));
+    await db.embeddingDao.upsertAll('acc-1', 'e-m', [
+      EmbeddingWrite(
+          uid: 'blank', contentHash: 1, vector: Float32List.fromList([1])),
+    ]);
+    final repo = FakeVectorRepository(configured);
+    final e = await engine(repo);
+
+    final sent = [for (final batch in repo.batches) ...batch];
+    expect(sent, hasLength(2));
+    expect(sent, contains('hello'));
+    expect(sent, contains('字' * VectorizationEngine.maxInputChars));
+    expect(sent, isNot(contains(long)));
+    final hashes = await db.embeddingDao.embeddedHashes('acc-1', 'e-m');
+    expect(hashes['long'], stableHash(long));
+    expect(hashes['ok'], stableHash('  hello '));
+    expect(hashes.containsKey('blank'), isFalse);
+    expect(e.state.value.status, VectorStatus.idle);
+    expect(e.state.value.embedded, 2);
+    expect(e.state.value.total, 2);
+  });
+
+  test('embeddingInput clips on grapheme boundaries', () {
+    expect(VectorizationEngine.embeddingInput('  \n\t'), isNull);
+    expect(VectorizationEngine.embeddingInput('  hello '), 'hello');
+    final emoji = '😀';
+    final clipped = VectorizationEngine.embeddingInput(
+        emoji * (VectorizationEngine.maxInputChars + 1));
+    expect(clipped, emoji * VectorizationEngine.maxInputChars);
+  });
+
+  test('one memo failing does not abort the rest of the pass', () async {
+    for (var i = 0; i < 16; i++) {
+      await db.memoDao.upsertLocalMemo('acc-1', memo('m$i', 'content $i'));
+    }
+    await db.memoDao
+        .upsertLocalMemo('acc-1', memo('bad', _OneBadMemoRepository.bad));
+    final repo = _OneBadMemoRepository(configured);
+    final e = await engine(repo);
+
+    final hashes = await db.embeddingDao.embeddedHashes('acc-1', 'e-m');
+    expect(hashes.length, 16);
+    expect(hashes.containsKey('bad'), isFalse);
+    expect(hashes['m0'], stableHash('content 0'));
+    expect(e.state.value.status, VectorStatus.error);
+    expect(e.state.value.lastError, contains('rejected bad memo'));
+    expect(e.state.value.embedded, 16);
+    expect(e.state.value.total, 17);
+    // The failing batch was split, and the pass still reached the rest.
+    expect(repo.batches.where((b) => b.length == 1).length, greaterThan(1));
+  });
+
+  test('a failing endpoint stops after the first batch', () async {
+    for (var i = 0; i < 20; i++) {
+      await db.memoDao.upsertLocalMemo('acc-1', memo('m$i', 'content $i'));
+    }
+    final repo = FakeVectorRepository(configured, failWith: 'HTTP 500 boom');
+    final e = await engine(repo);
+
+    // The batch request plus one isolated try per memo in that batch,
+    // not a walk of the remaining corpus.
+    expect(repo.batches.length, 1 + VectorizationEngine.batchSize);
+    expect(repo.batches.first, hasLength(VectorizationEngine.batchSize));
+    expect(e.state.value.status, VectorStatus.error);
+    expect(e.state.value.lastError, contains('boom'));
+    expect(e.state.value.embedded, 0);
+    expect(e.state.value.total, 20);
+    expect(await db.embeddingDao.embeddedHashes('acc-1', 'e-m'), isEmpty);
+  });
+
+  test('auth and rate-limit failures do not fan out per memo', () async {
+    for (var i = 0; i < 20; i++) {
+      await db.memoDao.upsertLocalMemo('acc-1', memo('m$i', 'content $i'));
+    }
+    for (final error in [
+      const LlmApiException('invalid api key', kind: LlmErrorKind.auth),
+      const LlmApiException('slow down', statusCode: 429),
+    ]) {
+      final repo = _SystemicFailureRepository(configured, error);
+      final e = VectorizationEngine(
+          accountId: 'acc-1', db: db, repository: repo);
+      await e.run();
+
+      expect(repo.batches, hasLength(1));
+      expect(repo.batches.single.length, greaterThan(1));
+      expect(e.state.value.status, VectorStatus.error);
+      expect(e.state.value.lastError, error.message);
+      expect(await db.embeddingDao.embeddedHashes('acc-1', 'e-m'), isEmpty);
+    }
   });
 
   test('pause landing during initial awaits keeps status paused', () async {

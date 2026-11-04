@@ -519,6 +519,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String vecLastError(Object error) {
+    return 'Vectorization failed: $error';
+  }
+
+  @override
   String get vecPause => 'Pause';
 
   @override

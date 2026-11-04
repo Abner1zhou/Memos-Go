@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:memos_go/data/llm/vectorization_engine.dart';
 import 'package:memos_go/features/settings/llm_settings_page.dart';
 import 'package:memos_go/l10n/generated/app_localizations.dart';
 import 'package:memos_go/providers/llm_providers.dart';
@@ -161,5 +162,47 @@ void main() {
         find.text('语义搜索'), find.byType(ListView), const Offset(0, -100));
     expect(find.text('语义搜索'), findsOneWidget);
     expect(find.textContaining('向量化会将笔记内容发送'), findsOneWidget);
+  });
+
+  testWidgets('shows vectorization lastError and offers resume',
+      (tester) async {
+    container.dispose();
+    container = ProviderContainer(overrides: [
+      vectorizationEngineProvider.overrideWithValue(null),
+      vectorizationStateProvider.overrideWith((ref) => Stream.value(
+            const VectorizationState(
+              status: VectorStatus.error,
+              embedded: 1,
+              total: 4,
+              lastError: 'HTTP 400 rejected',
+            ),
+          )),
+    ]);
+    await pumpPage(tester);
+
+    await tester.enterText(
+        find.byType(TextFormField).at(0), 'https://api.deepseek.com/v1');
+    await tester.enterText(find.byType(TextFormField).at(1), 'sk-secret');
+    await tester.enterText(
+        find.byType(TextFormField).at(2), 'deepseek-chat');
+    await tester.enterText(
+        find.byType(TextFormField).at(3), 'text-embedding-3-small');
+    await tester.pump();
+
+    await tester.tap(find.byType(FilledButton));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.dragUntilVisible(find.textContaining('向量化出错'),
+        find.byType(ListView), const Offset(0, -100));
+    expect(find.textContaining('HTTP 400 rejected'), findsOneWidget);
+    expect(find.text('已向量化 1/4 条'), findsOneWidget);
+    expect(find.text('继续'), findsOneWidget);
+    expect(find.text('暂停'), findsNothing);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -120));
+    await tester.pump();
+    await tester.tap(find.text('继续'));
+    await tester.pump();
   });
 }

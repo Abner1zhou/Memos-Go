@@ -1052,6 +1052,12 @@ abstract class AppLocalizations {
   /// **'已向量化 {done}/{total} 条'**
   String vecProgress(Object done, Object total);
 
+  /// No description provided for @vecLastError.
+  ///
+  /// In zh, this message translates to:
+  /// **'向量化出错：{error}'**
+  String vecLastError(Object error);
+
   /// No description provided for @vecPause.
   ///
   /// In zh, this message translates to:

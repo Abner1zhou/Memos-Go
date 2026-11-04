@@ -202,6 +202,8 @@
   "vecPrivacyNote": "Embedding sends memo content to your configured endpoint; vectors stay on this device only.",
   "vecProgress": "{done}/{total} memos embedded",
   "@vecProgress": { "placeholders": { "done": {}, "total": {} } },
+  "vecLastError": "Vectorization failed: {error}",
+  "@vecLastError": { "placeholders": { "error": {} } },
   "vecPause": "Pause",
   "vecResume": "Resume",
   "vecClear": "Clear all vectors",

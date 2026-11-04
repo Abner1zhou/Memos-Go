@@ -202,6 +202,8 @@
   "vecPrivacyNote": "向量化会将笔记内容发送到你配置的 embedding 端点，向量仅保存在本机。",
   "vecProgress": "已向量化 {done}/{total} 条",
   "@vecProgress": { "placeholders": { "done": {}, "total": {} } },
+  "vecLastError": "向量化出错：{error}",
+  "@vecLastError": { "placeholders": { "error": {} } },
   "vecPause": "暂停",
   "vecResume": "继续",
   "vecClear": "清除全部向量",

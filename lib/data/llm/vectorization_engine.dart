@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:characters/characters.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../core/utils/stable_hash.dart';
@@ -33,30 +34,52 @@ class VectorizationState {
     int? total,
     String? lastError,
     bool clearError = false,
-  }) =>
-      VectorizationState(
-        status: status ?? this.status,
-        embedded: embedded ?? this.embedded,
-        total: total ?? this.total,
-        lastError: clearError ? null : (lastError ?? this.lastError),
-      );
+  }) => VectorizationState(
+    status: status ?? this.status,
+    embedded: embedded ?? this.embedded,
+    total: total ?? this.total,
+    lastError: clearError ? null : (lastError ?? this.lastError),
+  );
 }
 
 /// Incrementally embeds the account's corpus against the configured
 /// OpenAI-compatible endpoint. The embedding table itself is the resume
 /// state: a pass embeds whatever's missing or hash-stale in batches of
 /// [batchSize], so interruptions (app kill, pause, error) lose nothing.
-/// Errors stop the pass instead of retry-storming; the next trigger (a
-/// corpus change via watchAll, a settings save, or resume) retries.
+///
+/// Request bodies are clipped to [maxInputChars]; blank memos are never
+/// sent. A memo the endpoint rejects is skipped: the message lands on
+/// [VectorizationState.lastError], vectors already written stay, and the
+/// pass continues. Auth, timeout, unreachable, and rate-limit failures
+/// stop the pass, as does a batch where every memo fails, so a dead
+/// endpoint is not called once per remaining memo. The next trigger (a
+/// corpus change, a settings save, or resume) retries what is still stale.
 class VectorizationEngine {
   VectorizationEngine({
     required this.accountId,
     required AppDatabase db,
     required this._repository,
-  })  : _dao = db.embeddingDao,
-        _memoDao = db.memoDao;
+  }) : _dao = db.embeddingDao,
+       _memoDao = db.memoDao;
 
   static const batchSize = 16;
+
+  /// Grapheme budget for one embedding input. Compatible endpoints commonly
+  /// cap at 8192 tokens (some at 512). 4000 clusters stays under an 8k-token
+  /// ceiling for both CJK and Latin, and keeps a long memo from being posted
+  /// in full. The stored content hash is still the original text.
+  static const maxInputChars = 4000;
+
+  /// Text actually posted for [content], or null when there is nothing to
+  /// embed (blank / whitespace only). Oversized memos are clipped to
+  /// [maxInputChars] grapheme clusters and are not given an ellipsis.
+  static String? embeddingInput(String content) {
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) return null;
+    final chars = trimmed.characters;
+    if (chars.length <= maxInputChars) return trimmed;
+    return chars.take(maxInputChars).toString();
+  }
 
   final String accountId;
   final EmbeddingDao _dao;
@@ -81,8 +104,7 @@ class VectorizationEngine {
     schedule();
   }
 
-  Stream<void> _watchCorpus() =>
-      _memoDao.watchAll(accountId).map<void>((_) {});
+  Stream<void> _watchCorpus() => _memoDao.watchAll(accountId).map<void>((_) {});
 
   /// Debounced pass request, e.g. after a sync wrote new memos.
   void schedule({Duration delay = const Duration(seconds: 4)}) {
@@ -108,63 +130,93 @@ class VectorizationEngine {
       // A pause/clear landing during the initial awaits must win over the
       // running status this pass is about to publish.
       if (_paused || generation != _generation) return;
-      final pending = <EmbeddableMemo>[
-        for (final m in corpus)
-          if (hashes[m.uid] != stableHash(m.content)) m
-      ];
-      var done = corpus.length - pending.length;
-      _state(VectorizationState(
+      final pending = <_PendingEmbed>[];
+      final skipped = <String>[];
+      for (final memo in corpus) {
+        final input = embeddingInput(memo.content);
+        if (input == null) {
+          skipped.add(memo.uid);
+          continue;
+        }
+        if (hashes[memo.uid] != stableHash(memo.content)) {
+          pending.add(_PendingEmbed(memo, input));
+        }
+      }
+      if (skipped.isNotEmpty) {
+        await _dao.deleteForUids(accountId, skipped);
+        if (_paused || generation != _generation) return;
+      }
+      // Blank memos are not embeddable, so they stay out of the progress
+      // total instead of sitting forever as "not yet vectorized".
+      final total = corpus.length - skipped.length;
+      var done = total - pending.length;
+      _state(
+        VectorizationState(
           status: VectorStatus.running,
           embedded: done,
-          total: corpus.length));
+          total: total,
+        ),
+      );
 
+      String? passError;
       for (var i = 0; i < pending.length; i += batchSize) {
         if (_paused || generation != _generation) return;
         final batch = pending.skip(i).take(batchSize).toList();
-        try {
-          final vectors = await _repository.embeddings(
-              settings,
-              inputs: [for (final m in batch) m.content]);
-          // A clear landing mid-batch must not resurrect its deleted rows.
-          if (generation != _generation) return;
-          if (vectors.length != batch.length) {
-            throw LlmApiException(
-                'Embedding count mismatch: ${vectors.length} of ${batch.length}');
-          }
-          await _dao.upsertAll(accountId, model, [
-            for (var j = 0; j < batch.length; j++)
-              EmbeddingWrite(
-                  uid: batch[j].uid,
-                  contentHash: stableHash(batch[j].content),
-                  vector: Float32List.fromList(vectors[j])),
-          ]);
-        } on LlmApiException catch (e) {
-          _state(state.value.copyWith(
-              status: VectorStatus.error, lastError: e.message));
-          return;
-        } catch (e) {
-          _state(state.value.copyWith(
-              status: VectorStatus.error, lastError: e.toString()));
-          return;
+        final outcome = await _embedBatch(
+          settings: settings,
+          model: model,
+          batch: batch,
+          generation: generation,
+        );
+        // clearVectors owns the notifier after a generation bump; don't
+        // republish progress on top of the wiped state.
+        if (generation != _generation) return;
+        done += outcome.embedded;
+        if (outcome.message != null) passError = outcome.message;
+        if (outcome.embedded > 0 || outcome.message != null) {
+          _state(
+            state.value.copyWith(embedded: done, lastError: outcome.message),
+          );
         }
-        done += batch.length;
-        _state(state.value.copyWith(embedded: done));
+        if (_paused) return;
+        if (outcome.halt) break;
       }
 
-      if (generation != _generation) return;
+      if (_paused || generation != _generation) return;
+      if (passError != null) {
+        _state(
+          state.value.copyWith(
+            status: VectorStatus.error,
+            embedded: done,
+            total: total,
+            lastError: passError,
+          ),
+        );
+        return;
+      }
+
       await _dao.deleteOrphans(accountId);
       // A completed pass makes the current model the only source of truth;
       // rows of previously used models are dead weight (the 3-column PK
-      // keeps them around otherwise).
+      // keeps them around otherwise). Partial failures skip this so a model
+      // switch doesn't drop the previous index before the new one is whole.
       await _dao.deleteOtherModels(accountId, model);
-      _state(VectorizationState(
+      if (_paused || generation != _generation) return;
+      _state(
+        VectorizationState(
           status: VectorStatus.idle,
-          embedded: corpus.length,
-          total: corpus.length));
+          embedded: total,
+          total: total,
+        ),
+      );
     } catch (e) {
       // Last resort: settings/corpus reads must never crash the caller.
-      _state(state.value.copyWith(
-          status: VectorStatus.error, lastError: e.toString()));
+      _state(
+        state.value.copyWith(
+          status: VectorStatus.error,
+          lastError: e.toString(),
+        ),
+      );
     } finally {
       _running = false;
     }
@@ -178,8 +230,9 @@ class VectorizationEngine {
 
   void resume() {
     _paused = false;
-    _state(state.value.copyWith(
-        status: VectorStatus.running, clearError: true));
+    _state(
+      state.value.copyWith(status: VectorStatus.running, clearError: true),
+    );
     schedule(delay: Duration.zero);
   }
 
@@ -200,4 +253,134 @@ class VectorizationEngine {
   }
 
   void _state(VectorizationState next) => state.value = next;
+
+  /// Embeds [batch]. A rejected memo is retried alone so its siblings can
+  /// still be stored. The outcome's halt flag is set when continuing would
+  /// only repeat a broken call: auth, timeout, unreachable, HTTP 429, or
+  /// every item in the batch failed.
+  Future<_BatchOutcome> _embedBatch({
+    required LlmSettings settings,
+    required String model,
+    required List<_PendingEmbed> batch,
+    required int generation,
+  }) async {
+    final inputs = [for (final item in batch) item.input];
+    final whole = await _tryEmbed(settings, inputs);
+    // A clear landing mid-request must not resurrect the rows it deleted.
+    if (generation != _generation) return const _BatchOutcome();
+    if (whole.vectors != null && whole.vectors!.length == batch.length) {
+      await _persist(model, [
+        for (var j = 0; j < batch.length; j++)
+          _write(batch[j], whole.vectors![j]),
+      ]);
+      return _BatchOutcome(embedded: batch.length);
+    }
+
+    final batchError =
+        whole.error ??
+        LlmApiException(
+          'Embedding count mismatch: ${whole.vectors?.length ?? 0} of ${batch.length}',
+        );
+    // A single-item batch is already isolated. Systemic failures won't
+    // succeed per memo, so don't fan out into one request per memo.
+    if (_haltsPass(batchError) || batch.length == 1) {
+      return _BatchOutcome(
+        message: _failureText(batchError),
+        halt: _haltsPass(batchError),
+      );
+    }
+
+    var embedded = 0;
+    String? message;
+    for (final item in batch) {
+      if (_paused || generation != _generation) {
+        return _BatchOutcome(embedded: embedded, message: message);
+      }
+      final one = await _tryEmbed(settings, [item.input]);
+      if (generation != _generation) {
+        return _BatchOutcome(embedded: embedded, message: message);
+      }
+      if (one.vectors != null && one.vectors!.length == 1) {
+        await _persist(model, [_write(item, one.vectors!.first)]);
+        embedded += 1;
+        continue;
+      }
+      final error =
+          one.error ??
+          LlmApiException(
+            'Embedding count mismatch: ${one.vectors?.length ?? 0} of 1',
+          );
+      message = _failureText(error);
+      if (_haltsPass(error)) {
+        return _BatchOutcome(embedded: embedded, message: message, halt: true);
+      }
+    }
+    return _BatchOutcome(
+      embedded: embedded,
+      message: message,
+      halt: message != null && embedded == 0,
+    );
+  }
+
+  Future<_EmbedCall> _tryEmbed(
+    LlmSettings settings,
+    List<String> inputs,
+  ) async {
+    try {
+      return _EmbedCall.ok(
+        await _repository.embeddings(settings, inputs: inputs),
+      );
+    } catch (e) {
+      return _EmbedCall.fail(e);
+    }
+  }
+
+  Future<void> _persist(String model, List<EmbeddingWrite> rows) =>
+      _dao.upsertAll(accountId, model, rows);
+
+  EmbeddingWrite _write(_PendingEmbed item, List<double> vector) =>
+      EmbeddingWrite(
+        uid: item.memo.uid,
+        contentHash: stableHash(item.memo.content),
+        vector: Float32List.fromList(vector),
+      );
+
+  bool _haltsPass(Object error) {
+    if (error is! LlmApiException) return false;
+    if (error.statusCode == 429) return true;
+    return switch (error.kind) {
+      LlmErrorKind.auth ||
+      LlmErrorKind.timeout ||
+      LlmErrorKind.unreachable => true,
+      _ => false,
+    };
+  }
+
+  String _failureText(Object error) =>
+      error is LlmApiException ? error.message : error.toString();
+}
+
+class _PendingEmbed {
+  const _PendingEmbed(this.memo, this.input);
+
+  final EmbeddableMemo memo;
+  final String input;
+}
+
+class _EmbedCall {
+  const _EmbedCall.ok(this.vectors) : error = null;
+  const _EmbedCall.fail(this.error) : vectors = null;
+
+  final List<List<double>>? vectors;
+  final Object? error;
+}
+
+class _BatchOutcome {
+  const _BatchOutcome({this.embedded = 0, this.message, this.halt = false});
+
+  final int embedded;
+  final String? message;
+
+  /// Stop the pass. Successes already in [embedded] stay written.
+  final bool halt;
 }
