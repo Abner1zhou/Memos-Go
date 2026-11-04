@@ -10,12 +10,13 @@ Memo _memo(
   String content, {
   DateTime? created,
   DateTime? updated,
-}) => Memo(
-  name: name,
-  content: content,
-  createTime: created,
-  updateTime: updated,
-);
+}) =>
+    Memo(
+      name: name,
+      content: content,
+      createTime: created,
+      updateTime: updated,
+    );
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -31,11 +32,8 @@ void main() {
       },
     );
 
-    final prompt = buildReviewDigestUserPrompt(
-      input,
-      now: DateTime(2026, 10, 14),
-      language: 'zh',
-    );
+    final prompt = buildReviewDigestUserPrompt(input,
+        now: DateTime(2026, 10, 14), language: 'zh');
 
     expect(prompt, contains('今天是 2026-10-14'));
     expect(prompt, contains('以下是用户今天的笔记'));
@@ -50,11 +48,8 @@ void main() {
       today: [_memo('memos/a', 'shipped the release')],
       onThisDay: const {},
     );
-    final prompt = buildReviewDigestUserPrompt(
-      input,
-      now: DateTime(2026, 10, 14),
-      language: 'en',
-    );
+    final prompt = buildReviewDigestUserPrompt(input,
+        now: DateTime(2026, 10, 14), language: 'en');
     expect(prompt, contains('Today is 2026-10-14'));
     expect(prompt, contains('1. shipped the release'));
     expect(prompt, isNot(contains('往年的今天')));
@@ -63,15 +58,11 @@ void main() {
   test('long memos are clipped and groups capped', () {
     final long = 'x' * 1000;
     final many = List.generate(
-      30,
-      (i) => _memo('memos/t$i', i == 0 ? long : 'memo $i'),
-    );
+        30, (i) => _memo('memos/t$i', i == 0 ? long : 'memo $i'));
     final input = ReviewDigestInput(today: many, onThisDay: const {});
 
-    final prompt = buildReviewDigestUserPrompt(
-      input,
-      now: DateTime(2026, 10, 14),
-    );
+    final prompt = buildReviewDigestUserPrompt(input,
+        now: DateTime(2026, 10, 14));
 
     expect(prompt, isNot(contains('memo 20\n')));
     expect(prompt, contains('memo 19'));
@@ -82,23 +73,19 @@ void main() {
   });
 
   test('fingerprint changes when a memo is edited', () {
-    final a = ReviewDigestInput(
-      today: [_memo('memos/a', 'v1', updated: DateTime(2026, 10, 14, 10))],
-      onThisDay: const {},
-    );
-    final b = ReviewDigestInput(
-      today: [_memo('memos/a', 'v2', updated: DateTime(2026, 10, 14, 11))],
-      onThisDay: const {},
-    );
-    final c = ReviewDigestInput(
-      today: [_memo('memos/a', 'v1', updated: DateTime(2026, 10, 14, 10))],
-      onThisDay: const {},
-    );
+    final a = ReviewDigestInput(today: [
+      _memo('memos/a', 'v1', updated: DateTime(2026, 10, 14, 10)),
+    ], onThisDay: const {});
+    final b = ReviewDigestInput(today: [
+      _memo('memos/a', 'v2', updated: DateTime(2026, 10, 14, 11)),
+    ], onThisDay: const {});
+    final c = ReviewDigestInput(today: [
+      _memo('memos/a', 'v1', updated: DateTime(2026, 10, 14, 10)),
+    ], onThisDay: const {});
     // Same content but a bumped timestamp alone also invalidates.
-    final d = ReviewDigestInput(
-      today: [_memo('memos/a', 'v1', updated: DateTime(2026, 10, 14, 12))],
-      onThisDay: const {},
-    );
+    final d = ReviewDigestInput(today: [
+      _memo('memos/a', 'v1', updated: DateTime(2026, 10, 14, 12)),
+    ], onThisDay: const {});
 
     expect(a.fingerprint(), c.fingerprint());
     expect(a.fingerprint(), isNot(b.fingerprint()));
@@ -106,14 +93,12 @@ void main() {
   });
 
   test('fingerprint changes when content changes but timestamp does not', () {
-    final a = ReviewDigestInput(
-      today: [_memo('memos/a', 'v1', updated: DateTime(2026, 10, 14, 10))],
-      onThisDay: const {},
-    );
-    final b = ReviewDigestInput(
-      today: [_memo('memos/a', 'v2', updated: DateTime(2026, 10, 14, 10))],
-      onThisDay: const {},
-    );
+    final a = ReviewDigestInput(today: [
+      _memo('memos/a', 'v1', updated: DateTime(2026, 10, 14, 10)),
+    ], onThisDay: const {});
+    final b = ReviewDigestInput(today: [
+      _memo('memos/a', 'v2', updated: DateTime(2026, 10, 14, 10)),
+    ], onThisDay: const {});
 
     expect(a.fingerprint(), isNot(b.fingerprint()));
   });
@@ -144,17 +129,13 @@ void main() {
     // account's keys are untouched.
     await cache.save('acc-2', '2026-10-13', entry);
     for (var i = 1; i <= 8; i++) {
-      await cache.save(
-        'acc-1',
-        '2026-09-${i.toString().padLeft(2, '0')}',
-        entry,
-      );
+      await cache.save('acc-1', '2026-09-${i.toString().padLeft(2, '0')}', entry);
     }
     final prefs = await SharedPreferences.getInstance();
     expect(await cache.load('acc-2', '2026-10-13'), isNotNull);
-    final acc1Keys = prefs.getKeys().where(
-      (k) => k.startsWith('memos_go.reviewDigest.acc-1.'),
-    );
+    final acc1Keys = prefs
+        .getKeys()
+        .where((k) => k.startsWith('memos_go.reviewDigest.acc-1.'));
     expect(acc1Keys.length, 7);
   });
 
@@ -193,10 +174,8 @@ void main() {
       fingerprint: 'f',
       generatedAt: DateTime(2026, 10, 14, 21, 30),
     );
-    final back = ReviewDigestEntry.fromJson(
-      convert.jsonDecode(convert.jsonEncode(entry.toJson()))
-          as Map<String, dynamic>,
-    );
+    final back =
+        ReviewDigestEntry.fromJson(convert.jsonDecode(convert.jsonEncode(entry.toJson())) as Map<String, dynamic>);
     expect(back.content, 'c');
     expect(back.generatedAt, DateTime(2026, 10, 14, 21, 30));
   });

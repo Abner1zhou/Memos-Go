@@ -20,11 +20,8 @@ import 'retrieval.dart';
 /// chars. Related: ≤3, must reference a candidate (by 1-based number or
 /// full name), self excluded, deduped, order preserved. Returns null on
 /// any malformed output.
-MemoSuggestion? parseSuggestion(
-  String raw, {
-  required List<String> candidateUids,
-  required String selfName,
-}) {
+MemoSuggestion? parseSuggestion(String raw,
+    {required List<String> candidateUids, required String selfName}) {
   var text = raw.trim();
   final fence = RegExp(r'```(?:json)?\s*([\s\S]*?)```');
   final m = fence.firstMatch(text);
@@ -60,7 +57,7 @@ MemoSuggestion? parseSuggestion(
   }
 
   final byNumber = {
-    for (var i = 0; i < candidateUids.length; i++) i + 1: candidateUids[i],
+    for (var i = 0; i < candidateUids.length; i++) i + 1: candidateUids[i]
   };
   final related = <String>[];
   final rawRelated = json['related'];
@@ -202,9 +199,8 @@ class SuggestionEngine {
   Future<void> run({String? language}) async {
     if (_running) return;
     _running = true;
-    final promptLanguage = normalizeSuggestionLanguage(
-      language ?? this.language(),
-    );
+    final promptLanguage =
+        normalizeSuggestionLanguage(language ?? this.language());
     final seen = guard?.epoch;
     bool stale() => guard != null && guard!.epoch != seen;
     try {
@@ -228,23 +224,21 @@ class SuggestionEngine {
           if (record == null) continue;
           final content = record.memo.content;
           final contentHash = stableHash(content);
-          final existing = await _db.suggestionDao
-              .watchSuggestion(accountId, uid)
-              .first;
+          final existing =
+              await _db.suggestionDao.watchSuggestion(accountId, uid).first;
           if (existing != null && existing.contentHash == contentHash) {
             continue;
           }
 
-          var hits = await _retrieval.retrieve(
-            accountId,
-            content,
-            k: candidateCount,
-          );
+          var hits = await _retrieval.retrieve(accountId, content,
+              k: candidateCount);
           hits = [
             for (final h in hits)
-              if (h.record.memo.name != record.memo.name) h,
+              if (h.record.memo.name != record.memo.name) h
           ];
-          final candidateUids = [for (final h in hits) h.record.memo.name];
+          final candidateUids = [
+            for (final h in hits) h.record.memo.name
+          ];
           if (candidateUids.isEmpty) continue;
 
           final tags = await _db.suggestionDao.distinctTags(accountId);
@@ -252,15 +246,14 @@ class SuggestionEngine {
             settings,
             messages: [
               LlmChatMessage(
-                role: 'system',
-                content: _systemPrompt(promptLanguage),
-              ),
+                  role: 'system', content: _systemPrompt(promptLanguage)),
               LlmChatMessage(
-                role: 'user',
-                content: _userPrompt(content, tags, [
-                  for (final h in hits) h.record,
-                ], promptLanguage),
-              ),
+                  role: 'user',
+                  content: _userPrompt(
+                      content,
+                      tags,
+                      [for (final h in hits) h.record],
+                      promptLanguage)),
             ],
             maxTokens: 256,
           );
@@ -268,11 +261,8 @@ class SuggestionEngine {
             _pending.clear();
             return;
           }
-          final suggestion = parseSuggestion(
-            answer,
-            candidateUids: candidateUids,
-            selfName: record.memo.name,
-          );
+          final suggestion = parseSuggestion(answer,
+              candidateUids: candidateUids, selfName: record.memo.name);
           // 无论建议是否为空都落库：空建议行也是"这一版内容已算过"的缓存标记，
           // 否则每次语料变动都会把同一条重算一遍（重试风暴的反面教材）。
           if (suggestion == null) continue;
@@ -305,31 +295,23 @@ class SuggestionEngine {
 
   static String _systemPrompt(String language) => language == 'en'
       ? 'You suggest metadata for a just-saved note. Answer with JSON ONLY, '
-            'no prose: {"tags": [up to 3 strings], "related": [up to 3 numbers]} '
-            '-- tags prefer the listed existing tags; related picks the most '
-            'relevant numbered candidates (or omit both arrays when nothing fits).'
+        'no prose: {"tags": [up to 3 strings], "related": [up to 3 numbers]} '
+        '-- tags prefer the listed existing tags; related picks the most '
+        'relevant numbered candidates (or omit both arrays when nothing fits).'
       : '你为刚保存的笔记建议元数据。只输出 JSON，不要任何其他文字：'
-            '{"tags": [最多 3 个字符串], "related": [最多 3 个编号]}'
-            '——tags 优先从列出的已有标签中选；related 选最相关的编号候选；都不合适可为空数组。';
+        '{"tags": [最多 3 个字符串], "related": [最多 3 个编号]}'
+        '——tags 优先从列出的已有标签中选；related 选最相关的编号候选；都不合适可为空数组。';
 
-  static String _userPrompt(
-    String content,
-    List<String> tags,
-    List<MemoRecord> records,
-    String language,
-  ) {
+  static String _userPrompt(String content, List<String> tags,
+      List<MemoRecord> records, String language) {
     final b = StringBuffer();
-    b.writeln(
-      language == 'en'
-          ? 'Existing tags: ${tags.join(', ')}'
-          : '已有标签：${tags.join('、')}',
-    );
+    b.writeln(language == 'en'
+        ? 'Existing tags: ${tags.join(', ')}'
+        : '已有标签：${tags.join('、')}');
     b.writeln();
     b.writeln(language == 'en' ? 'Candidate related memos:' : '候选相关记忆：');
     for (var i = 0; i < records.length; i++) {
-      b.writeln(
-        '[${i + 1}] ${clipText(records[i].memo.content, excerptChars)}',
-      );
+      b.writeln('[${i + 1}] ${clipText(records[i].memo.content, excerptChars)}');
     }
     b.writeln();
     b.writeln(language == 'en' ? 'New note:' : '新笔记：');

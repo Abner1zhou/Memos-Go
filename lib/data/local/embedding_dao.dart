@@ -17,11 +17,8 @@ class EmbeddableMemo {
 
 /// One vector to persist for a memo.
 class EmbeddingWrite {
-  const EmbeddingWrite({
-    required this.uid,
-    required this.contentHash,
-    required this.vector,
-  });
+  const EmbeddingWrite(
+      {required this.uid, required this.contentHash, required this.vector});
 
   final String uid;
   final int contentHash;
@@ -45,93 +42,72 @@ class EmbeddingDao extends DatabaseAccessor<AppDatabase>
 
   /// The vectorization corpus: normal memos with non-empty content.
   Future<List<EmbeddableMemo>> corpus(String accountId) async {
-    final rows =
-        await (selectOnly(memos)
-              ..addColumns([memos.uid, memos.content])
-              ..where(
-                memos.accountId.equals(accountId) &
-                    memos.state.equals(MemoState.normal.wireName) &
-                    memos.content.equals('').not(),
-              ))
-            .get();
+    final rows = await (selectOnly(memos)
+          ..addColumns([memos.uid, memos.content])
+          ..where(memos.accountId.equals(accountId) &
+              memos.state.equals(MemoState.normal.wireName) &
+              memos.content.equals('').not()))
+        .get();
     return [
       for (final row in rows)
         EmbeddableMemo(
-          uid: row.read(memos.uid)!,
-          content: row.read(memos.content)!,
-        ),
+            uid: row.read(memos.uid)!,
+            content: row.read(memos.content)!),
     ];
   }
 
   /// uid -> contentHash for rows already embedded with [model].
-  Future<Map<String, int>> embeddedHashes(
-    String accountId,
-    String model,
-  ) async {
-    final rows =
-        await (selectOnly(memoEmbeddings)
-              ..addColumns([memoEmbeddings.memoUid, memoEmbeddings.contentHash])
-              ..where(
-                memoEmbeddings.accountId.equals(accountId) &
-                    memoEmbeddings.model.equals(model),
-              ))
-            .get();
+  Future<Map<String, int>> embeddedHashes(String accountId, String model) async {
+    final rows = await (selectOnly(memoEmbeddings)
+          ..addColumns([memoEmbeddings.memoUid, memoEmbeddings.contentHash])
+          ..where(memoEmbeddings.accountId.equals(accountId) &
+              memoEmbeddings.model.equals(model)))
+        .get();
     return {
       for (final row in rows)
-        row.read(memoEmbeddings.memoUid)!: row.read(
-          memoEmbeddings.contentHash,
-        )!,
+        row.read(memoEmbeddings.memoUid)!:
+            row.read(memoEmbeddings.contentHash)!,
     };
   }
 
   /// Inserts or replaces the given vectors (PK
   /// `(accountId, memoUid, model)`).
   Future<void> upsertAll(
-    String accountId,
-    String model,
-    List<EmbeddingWrite> rows,
-  ) {
+      String accountId, String model, List<EmbeddingWrite> rows) {
     final now = DateTime.now();
-    return batch(
-      (b) => b.insertAll(memoEmbeddings, [
-        for (final row in rows)
-          MemoEmbeddingsCompanion.insert(
-            accountId: accountId,
-            memoUid: row.uid,
-            model: model,
-            contentHash: row.contentHash,
-            vector: row.vector.buffer.asUint8List(
-              row.vector.offsetInBytes,
-              row.vector.lengthInBytes,
-            ),
-            embeddedAt: now,
-          ),
-      ], mode: InsertMode.insertOrReplace),
-    );
+    return batch((b) => b.insertAll(
+          memoEmbeddings,
+          [
+            for (final row in rows)
+              MemoEmbeddingsCompanion.insert(
+                accountId: accountId,
+                memoUid: row.uid,
+                model: model,
+                contentHash: row.contentHash,
+                vector: row.vector.buffer.asUint8List(
+                    row.vector.offsetInBytes, row.vector.lengthInBytes),
+                embeddedAt: now,
+              ),
+          ],
+          mode: InsertMode.insertOrReplace,
+        ));
   }
 
   /// All stored vectors for one model (the brute-force search input).
-  Future<List<VectorRow>> vectorsForModel(
-    String accountId,
-    String model,
-  ) async {
-    final rows =
-        await (selectOnly(memoEmbeddings)
-              ..addColumns([memoEmbeddings.memoUid, memoEmbeddings.vector])
-              ..where(
-                memoEmbeddings.accountId.equals(accountId) &
-                    memoEmbeddings.model.equals(model),
-              )
-              // Deterministic order: insertOrReplace re-inserts with a fresh
-              // rowid, so physical order is not stable across rewrites.
-              ..orderBy([OrderingTerm.asc(memoEmbeddings.memoUid)]))
-            .get();
+  Future<List<VectorRow>> vectorsForModel(String accountId, String model) async {
+    final rows = await (selectOnly(memoEmbeddings)
+          ..addColumns([memoEmbeddings.memoUid, memoEmbeddings.vector])
+          ..where(memoEmbeddings.accountId.equals(accountId) &
+              memoEmbeddings.model.equals(model))
+          // Deterministic order: insertOrReplace re-inserts with a fresh
+          // rowid, so physical order is not stable across rewrites.
+          ..orderBy([OrderingTerm.asc(memoEmbeddings.memoUid)]))
+        .get();
     return [
       for (final row in rows)
         VectorRow(
-          uid: row.read(memoEmbeddings.memoUid)!,
-          bytes: row.read(memoEmbeddings.vector)!,
-        ),
+            uid: row.read(memoEmbeddings.memoUid)!,
+            bytes: row.read(memoEmbeddings.vector)!),
     ];
   }
 
@@ -141,15 +117,13 @@ class EmbeddingDao extends DatabaseAccessor<AppDatabase>
   Future<void> deleteOrphans(String accountId) async {
     final remaining = selectOnly(memos)
       ..addColumns([memos.uid])
-      ..where(
-        memos.accountId.equals(accountId) &
-            memos.state.equals(MemoState.normal.wireName) &
-            memos.content.equals('').not(),
-      );
-    await (delete(memoEmbeddings)..where(
-          (e) =>
-              e.accountId.equals(accountId) & e.memoUid.isNotInQuery(remaining),
-        ))
+      ..where(memos.accountId.equals(accountId) &
+          memos.state.equals(MemoState.normal.wireName) &
+          memos.content.equals('').not());
+    await (delete(memoEmbeddings)
+          ..where((e) =>
+              e.accountId.equals(accountId) &
+              e.memoUid.isNotInQuery(remaining)))
         .go();
   }
 
@@ -157,15 +131,16 @@ class EmbeddingDao extends DatabaseAccessor<AppDatabase>
   /// completed pass so switching the embedding model doesn't leave the
   /// previous model's rows as dead weight (3-column PK keeps them).
   Future<void> deleteOtherModels(String accountId, String keepModel) =>
-      (delete(memoEmbeddings)..where(
-            (e) =>
-                e.accountId.equals(accountId) & e.model.equals(keepModel).not(),
-          ))
+      (delete(memoEmbeddings)
+            ..where((e) =>
+                e.accountId.equals(accountId) &
+                e.model.equals(keepModel).not()))
           .go();
 
-  Future<void> deleteAllForAccount(String accountId) => (delete(
-    memoEmbeddings,
-  )..where((e) => e.accountId.equals(accountId))).go();
+  Future<void> deleteAllForAccount(String accountId) =>
+      (delete(memoEmbeddings)
+            ..where((e) => e.accountId.equals(accountId)))
+          .go();
 
   /// Drops every account's vectors. LLM settings are global, so a privacy
   /// wipe cannot leave another account's embeddings behind.
@@ -176,8 +151,9 @@ class EmbeddingDao extends DatabaseAccessor<AppDatabase>
   /// otherwise survive [deleteOrphans].
   Future<void> deleteForUids(String accountId, List<String> uids) async {
     if (uids.isEmpty) return;
-    await (delete(
-      memoEmbeddings,
-    )..where((e) => e.accountId.equals(accountId) & e.memoUid.isIn(uids))).go();
+    await (delete(memoEmbeddings)
+          ..where((e) =>
+              e.accountId.equals(accountId) & e.memoUid.isIn(uids)))
+        .go();
   }
 }

@@ -24,16 +24,12 @@ class FakeVectorRepository extends LlmRepository {
   Future<LlmSettings> load() async => settings;
 
   @override
-  Future<List<List<double>>> embeddings(
-    LlmSettings s, {
-    required List<String> inputs,
-  }) async {
+  Future<List<List<double>>> embeddings(LlmSettings s,
+      {required List<String> inputs}) async {
     batches.add(inputs);
     final failure = failWith;
     if (failure != null) throw LlmApiException(failure);
-    return [
-      for (final text in inputs) [text.length.toDouble(), 1.0],
-    ];
+    return [for (final text in inputs) [text.length.toDouble(), 1.0]];
   }
 }
 
@@ -44,19 +40,14 @@ class _OneBadMemoRepository extends FakeVectorRepository {
   static const bad = 'bad memo';
 
   @override
-  Future<List<List<double>>> embeddings(
-    LlmSettings s, {
-    required List<String> inputs,
-  }) async {
+  Future<List<List<double>>> embeddings(LlmSettings s,
+      {required List<String> inputs}) async {
     batches.add(inputs);
     if (inputs.length > 1 || inputs.single == bad) {
       throw LlmApiException(
-        inputs.length > 1 ? 'batch rejected' : 'rejected bad memo',
-      );
+          inputs.length > 1 ? 'batch rejected' : 'rejected bad memo');
     }
-    return [
-      for (final text in inputs) [text.length.toDouble(), 1.0],
-    ];
+    return [for (final text in inputs) [text.length.toDouble(), 1.0]];
   }
 }
 
@@ -67,20 +58,15 @@ class _SystemicFailureRepository extends FakeVectorRepository {
   final LlmApiException error;
 
   @override
-  Future<List<List<double>>> embeddings(
-    LlmSettings s, {
-    required List<String> inputs,
-  }) async {
+  Future<List<List<double>>> embeddings(LlmSettings s,
+      {required List<String> inputs}) async {
     batches.add(inputs);
     throw error;
   }
 }
 
 Memo memo(String uid, String content) => Memo(
-  name: 'memos/$uid',
-  content: content,
-  createTime: DateTime(2026, 10, 1),
-);
+    name: 'memos/$uid', content: content, createTime: DateTime(2026, 10, 1));
 
 /// Embeddings stall on [gate] so a test can interleave clearVectors with an
 /// in-flight batch.
@@ -90,10 +76,8 @@ class GatedVectorRepository extends FakeVectorRepository {
   final Completer<void> gate;
 
   @override
-  Future<List<List<double>>> embeddings(
-    LlmSettings s, {
-    required List<String> inputs,
-  }) async {
+  Future<List<List<double>>> embeddings(LlmSettings s,
+      {required List<String> inputs}) async {
     await gate.future;
     return super.embeddings(s, inputs: inputs);
   }
@@ -140,7 +124,8 @@ void main() {
   });
 
   Future<VectorizationEngine> engine(FakeVectorRepository repo) async {
-    final e = VectorizationEngine(accountId: 'acc-1', db: db, repository: repo);
+    final e = VectorizationEngine(
+        accountId: 'acc-1', db: db, repository: repo);
     await e.run();
     return e;
   }
@@ -168,48 +153,40 @@ void main() {
     await engine(repo);
 
     repo.batches.clear();
-    await db.memoDao.upsertLocalMemo('acc-1', memo('b', 'changed content'));
+    await db.memoDao
+        .upsertLocalMemo('acc-1', memo('b', 'changed content'));
     final e = await engine(repo);
 
     expect(repo.batches, [
-      ['changed content'],
+      ['changed content']
     ]);
     expect(e.state.value.embedded, 2);
   });
 
-  test(
-    'switching the model re-embeds everything and sweeps the old model',
-    () async {
-      await db.memoDao.upsertLocalMemo('acc-1', memo('a', 'x'));
-      await engine(FakeVectorRepository(configured));
-
-      final repo2 = FakeVectorRepository(
-        const LlmSettings(
-          baseUrl: 'https://l/v1',
-          apiKey: 'k',
-          chatModel: 'c',
-          embeddingModel: 'e-other',
-        ),
-      );
-      await engine(repo2);
-
-      expect(repo2.batches, [
-        ['x'],
-      ]);
-      expect(
-        (await db.embeddingDao.vectorsForModel('acc-1', 'e-other')).length,
-        1,
-      );
-      // A completed pass makes the new model the only source of truth.
-      expect((await db.embeddingDao.vectorsForModel('acc-1', 'e-m')).length, 0);
-    },
-  );
-
-  test('unconfigured settings leave the engine idle with no calls', () async {
+  test('switching the model re-embeds everything and sweeps the old model',
+      () async {
     await db.memoDao.upsertLocalMemo('acc-1', memo('a', 'x'));
-    final repo = FakeVectorRepository(
-      const LlmSettings(baseUrl: '', apiKey: ''),
-    );
+    await engine(FakeVectorRepository(configured));
+
+    final repo2 = FakeVectorRepository(
+        const LlmSettings(baseUrl: 'https://l/v1', apiKey: 'k',
+            chatModel: 'c', embeddingModel: 'e-other'));
+    await engine(repo2);
+
+    expect(repo2.batches, [
+      ['x']
+    ]);
+    expect((await db.embeddingDao.vectorsForModel('acc-1', 'e-other')).length,
+        1);
+    // A completed pass makes the new model the only source of truth.
+    expect((await db.embeddingDao.vectorsForModel('acc-1', 'e-m')).length, 0);
+  });
+
+  test('unconfigured settings leave the engine idle with no calls',
+      () async {
+    await db.memoDao.upsertLocalMemo('acc-1', memo('a', 'x'));
+    final repo =
+        FakeVectorRepository(const LlmSettings(baseUrl: '', apiKey: ''));
     final e = await engine(repo);
 
     expect(repo.batches, isEmpty);
@@ -220,7 +197,8 @@ void main() {
   test('paused engine performs no calls', () async {
     await db.memoDao.upsertLocalMemo('acc-1', memo('a', 'x'));
     final repo = FakeVectorRepository(configured);
-    final e = VectorizationEngine(accountId: 'acc-1', db: db, repository: repo);
+    final e = VectorizationEngine(
+        accountId: 'acc-1', db: db, repository: repo);
     e.pause();
     await e.run();
     expect(repo.batches, isEmpty);
@@ -234,7 +212,8 @@ void main() {
 
     expect(e.state.value.status, VectorStatus.error);
     expect(e.state.value.lastError, contains('boom'));
-    expect(await db.embeddingDao.embeddedHashes('acc-1', 'e-m'), isEmpty);
+    expect(
+        await db.embeddingDao.embeddedHashes('acc-1', 'e-m'), isEmpty);
   });
 
   test('clearVectors wipes rows and resets state', () async {
@@ -249,26 +228,23 @@ void main() {
   test('a completed pass sweeps orphan rows', () async {
     await db.embeddingDao.upsertAll('acc-1', 'e-m', [
       EmbeddingWrite(
-        uid: 'ghost',
-        contentHash: 1,
-        vector: Float32List.fromList([1]),
-      ),
+          uid: 'ghost', contentHash: 1, vector: Float32List.fromList([1])),
     ]);
     final e = await engine(FakeVectorRepository(configured));
     expect(e.state.value.status, VectorStatus.idle);
     expect(await db.embeddingDao.embeddedHashes('acc-1', 'e-m'), isEmpty);
   });
 
-  test('clearVectors aborts an in-flight pass and leaves it paused', () async {
+  test('clearVectors aborts an in-flight pass and leaves it paused',
+      () async {
     for (var i = 0; i < 20; i++) {
       await db.memoDao.upsertLocalMemo('acc-1', memo('m$i', 'content $i'));
     }
     final gate = Completer<void>();
     final e = VectorizationEngine(
-      accountId: 'acc-1',
-      db: db,
-      repository: GatedVectorRepository(configured, gate: gate),
-    );
+        accountId: 'acc-1',
+        db: db,
+        repository: GatedVectorRepository(configured, gate: gate));
     final done = e.run();
     // Let the pass reach the gated embeddings call.
     await Future<void>.delayed(Duration.zero);
@@ -286,10 +262,9 @@ void main() {
     await db.memoDao.upsertLocalMemo('acc-1', memo('a', 'x'));
     final gate = Completer<void>();
     final e = VectorizationEngine(
-      accountId: 'acc-1',
-      db: db,
-      repository: GatedVectorRepository(configured, gate: gate),
-    );
+        accountId: 'acc-1',
+        db: db,
+        repository: GatedVectorRepository(configured, gate: gate));
     final done = e.run();
     await Future<void>.delayed(Duration.zero);
     e.abandonInFlight();
@@ -300,19 +275,15 @@ void main() {
     expect(e.state.value.status, VectorStatus.idle);
 
     await e.run();
-    expect(
-      (await db.embeddingDao.embeddedHashes('acc-1', 'e-m')).containsKey('a'),
-      isTrue,
-    );
+    expect((await db.embeddingDao.embeddedHashes('acc-1', 'e-m')).containsKey('a'),
+        isTrue);
   });
 
   test('load() failure lands in state instead of throwing', () async {
     await db.memoDao.upsertLocalMemo('acc-1', memo('a', 'x'));
     final e = VectorizationEngine(
-      accountId: 'acc-1',
-      db: db,
-      repository: ThrowingLoadRepository(configured),
-    );
+        accountId: 'acc-1', db: db, repository: ThrowingLoadRepository(
+            configured));
     await e.run();
 
     expect(e.state.value.status, VectorStatus.error);
@@ -326,10 +297,7 @@ void main() {
     await db.memoDao.upsertLocalMemo('acc-1', memo('ok', '  hello '));
     await db.embeddingDao.upsertAll('acc-1', 'e-m', [
       EmbeddingWrite(
-        uid: 'blank',
-        contentHash: 1,
-        vector: Float32List.fromList([1]),
-      ),
+          uid: 'blank', contentHash: 1, vector: Float32List.fromList([1])),
     ]);
     final repo = FakeVectorRepository(configured);
     final e = await engine(repo);
@@ -353,8 +321,7 @@ void main() {
     expect(VectorizationEngine.embeddingInput('  hello '), 'hello');
     final emoji = '😀';
     final clipped = VectorizationEngine.embeddingInput(
-      emoji * (VectorizationEngine.maxInputChars + 1),
-    );
+        emoji * (VectorizationEngine.maxInputChars + 1));
     expect(clipped, emoji * VectorizationEngine.maxInputChars);
   });
 
@@ -362,10 +329,8 @@ void main() {
     for (var i = 0; i < 16; i++) {
       await db.memoDao.upsertLocalMemo('acc-1', memo('m$i', 'content $i'));
     }
-    await db.memoDao.upsertLocalMemo(
-      'acc-1',
-      memo('bad', _OneBadMemoRepository.bad),
-    );
+    await db.memoDao
+        .upsertLocalMemo('acc-1', memo('bad', _OneBadMemoRepository.bad));
     final repo = _OneBadMemoRepository(configured);
     final e = await engine(repo);
 
@@ -409,10 +374,7 @@ void main() {
     ]) {
       final repo = _SystemicFailureRepository(configured, error);
       final e = VectorizationEngine(
-        accountId: 'acc-1',
-        db: db,
-        repository: repo,
-      );
+          accountId: 'acc-1', db: db, repository: repo);
       await e.run();
 
       expect(repo.batches, hasLength(1));
@@ -427,10 +389,7 @@ void main() {
     await db.memoDao.upsertLocalMemo('acc-1', memo('a', 'x'));
     final repo = _GatedLoadRepository(configured);
     final engine = VectorizationEngine(
-      accountId: 'acc-1',
-      db: db,
-      repository: repo,
-    );
+        accountId: 'acc-1', db: db, repository: repo);
     final done = engine.run();
     await Future<void>.delayed(Duration.zero);
     engine.pause();
