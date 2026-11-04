@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../l10n/generated/app_localizations.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +9,7 @@ import '../../core/utils/llm_errors.dart';
 import '../../data/api/llm_api.dart';
 import '../../data/llm/vectorization_engine.dart';
 import '../../data/repositories/llm_repository.dart';
+import '../../providers/ai_privacy_providers.dart';
 import '../../providers/llm_providers.dart';
 import '../../providers/vectorization_providers.dart';
 
@@ -27,6 +30,7 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
 
   var _busy = false;
   var _suggestOnSave = true;
+  var _hadConfiguredLlm = false;
   String? _error;
 
   @override
@@ -39,7 +43,10 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
       _apiKeyController.text = settings.apiKey;
       _chatModelController.text = settings.chatModel;
       _embeddingModelController.text = settings.embeddingModel;
-      setState(() => _suggestOnSave = settings.suggestOnSave);
+      setState(() {
+        _suggestOnSave = settings.suggestOnSave;
+        _hadConfiguredLlm = settings.isConfigured;
+      });
     });
   }
 
@@ -53,12 +60,12 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
   }
 
   LlmSettings _currentFields() => LlmSettings(
-        baseUrl: normalizeLlmBaseUrl(_baseUrlController.text.trim()),
-        apiKey: _apiKeyController.text.trim(),
-        chatModel: _chatModelController.text.trim(),
-        embeddingModel: _embeddingModelController.text.trim(),
-        suggestOnSave: _suggestOnSave,
-      );
+    baseUrl: normalizeLlmBaseUrl(_baseUrlController.text.trim()),
+    apiKey: _apiKeyController.text.trim(),
+    chatModel: _chatModelController.text.trim(),
+    embeddingModel: _embeddingModelController.text.trim(),
+    suggestOnSave: _suggestOnSave,
+  );
 
   /// Returns the settings to persist, or null (with `_error` set) when the
   /// form is invalid. An entirely empty form is allowed and simply disables
@@ -66,7 +73,8 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
   LlmSettings? _validate() {
     final l10n = AppLocalizations.of(context)!;
     final settings = _currentFields();
-    final empty = settings.baseUrl.isEmpty &&
+    final empty =
+        settings.baseUrl.isEmpty &&
         settings.apiKey.isEmpty &&
         settings.chatModel.isEmpty;
     if (empty) return settings;
@@ -104,9 +112,13 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
           ..showSnackBar(SnackBar(content: Text(l10n.llmEmbeddingsTestOk)));
       }
     } on LlmApiException catch (e) {
-      setState(() => _error = '${l10n.llmTestFailed}: ${llmErrorMessage(l10n, e)}');
+      setState(
+        () => _error = '${l10n.llmTestFailed}: ${llmErrorMessage(l10n, e)}',
+      );
     } catch (e) {
-      setState(() => _error = '${l10n.llmTestFailed}: ${llmErrorMessage(l10n, e)}');
+      setState(
+        () => _error = '${l10n.llmTestFailed}: ${llmErrorMessage(l10n, e)}',
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -116,11 +128,36 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
     setState(() => _error = null);
     final settings = _validate();
     if (settings == null) return;
+    if (_hadConfiguredLlm && !settings.isConfigured) {
+      if (!await _confirmPrivacyWipe()) return;
+      if (!mounted) return;
+      await _wipeAiArtifacts();
+    }
     await ref.read(llmProvider.notifier).save(settings);
+    _hadConfiguredLlm = settings.isConfigured;
     if (mounted && context.canPop()) context.pop();
   }
 
   Future<void> _clear() async {
+    if (!await _confirmPrivacyWipe()) return;
+    if (!mounted) return;
+    await _wipeAiArtifacts();
+    await ref.read(llmProvider.notifier).clear();
+    if (!mounted) return;
+    setState(() {
+      _baseUrlController.clear();
+      _apiKeyController.clear();
+      _chatModelController.clear();
+      _embeddingModelController.clear();
+      _suggestOnSave = true;
+      _hadConfiguredLlm = false;
+      _error = null;
+    });
+  }
+
+  /// Confirms clearing credentials and the local AI artifacts that depended
+  /// on them. Returns false when the dialog is dismissed.
+  Future<bool> _confirmPrivacyWipe() async {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -138,21 +175,15 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
         ],
       ),
     );
-    if (confirmed != true) return;
-    await ref.read(llmProvider.notifier).clear();
-    if (!mounted) return;
-    setState(() {
-      _baseUrlController.clear();
-      _apiKeyController.clear();
-      _chatModelController.clear();
-      _embeddingModelController.clear();
-      _suggestOnSave = true;
-      _error = null;
-    });
+    return confirmed == true;
   }
 
+  Future<void> _wipeAiArtifacts() => ref.read(aiArtifactWiperProvider)();
+
   Future<void> _clearVectors(
-      BuildContext context, VectorizationEngine? engine) async {
+    BuildContext context,
+    VectorizationEngine? engine,
+  ) async {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -183,8 +214,8 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
     final vecError = vec?.lastError;
     // Pause stops a running pass. An error means it already stopped;
     // Resume retries the memos that are still missing.
-    final vecStalled = vec?.status == VectorStatus.paused ||
-        vec?.status == VectorStatus.error;
+    final vecStalled =
+        vec?.status == VectorStatus.paused || vec?.status == VectorStatus.error;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.llmSettingsTitle)),
@@ -193,8 +224,9 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
         children: [
           Text(
             l10n.llmSettingsSubtitle,
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 12),
           TextFormField(
@@ -246,10 +278,7 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
           ),
           if (_error != null) ...[
             const SizedBox(height: 4),
-            Text(
-              _error!,
-              style: TextStyle(color: theme.colorScheme.error),
-            ),
+            Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
           ],
           const SizedBox(height: 8),
           FilledButton(
@@ -271,49 +300,62 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
             const SizedBox(height: 8),
             TextButton(
               onPressed: _busy ? null : _clear,
-              child: Text(l10n.llmClear,
-                  style: TextStyle(color: theme.colorScheme.error)),
+              child: Text(
+                l10n.llmClear,
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
             ),
           ],
           if (ref.watch(llmProvider).embeddingsConfigured) ...[
             const Divider(height: 32),
-            Text(l10n.vecSection,
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(color: theme.colorScheme.primary)),
+            Text(
+              l10n.vecSection,
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: theme.colorScheme.primary,
+              ),
+            ),
             const SizedBox(height: 4),
             Text(
               l10n.vecPrivacyNote,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 8),
             if (vec != null && vec.total > 0) ...[
               LinearProgressIndicator(value: vec.fraction),
               const SizedBox(height: 4),
-              Text(l10n.vecProgress(vec.embedded, vec.total),
-                  style: theme.textTheme.bodySmall),
+              Text(
+                l10n.vecProgress(vec.embedded, vec.total),
+                style: theme.textTheme.bodySmall,
+              ),
             ],
             if (vecError != null) ...[
               const SizedBox(height: 4),
               Text(
                 l10n.vecLastError(vecError),
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.error),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
               ),
             ],
             const SizedBox(height: 4),
-            Row(children: [
-              TextButton(
-                onPressed: () =>
-                    vecStalled ? engine?.resume() : engine?.pause(),
-                child: Text(vecStalled ? l10n.vecResume : l10n.vecPause),
-              ),
-              TextButton(
-                onPressed: () => _clearVectors(context, engine),
-                child: Text(l10n.vecClear,
-                    style: TextStyle(color: theme.colorScheme.error)),
-              ),
-            ]),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: () =>
+                      vecStalled ? engine?.resume() : engine?.pause(),
+                  child: Text(vecStalled ? l10n.vecResume : l10n.vecPause),
+                ),
+                TextButton(
+                  onPressed: () => _clearVectors(context, engine),
+                  child: Text(
+                    l10n.vecClear,
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
+                ),
+              ],
+            ),
           ],
         ],
       ),

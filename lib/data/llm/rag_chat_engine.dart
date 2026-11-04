@@ -5,6 +5,7 @@ import '../api/llm_api.dart';
 import '../local/app_database.dart';
 import '../local/chat_dao.dart';
 import '../repositories/llm_repository.dart';
+import 'ai_activity_guard.dart';
 import 'retrieval.dart';
 
 /// One in-flight turn: citations known up front + the answer stream. The
@@ -27,6 +28,7 @@ class RagChatEngine {
     required this._db,
     required this._repository,
     required this._retrieval,
+    this.guard,
   });
 
   static const excerptChars = 400;
@@ -43,19 +45,29 @@ class RagChatEngine {
   final LlmRepository _repository;
   final RetrievalService _retrieval;
 
+  /// When invalidated, this turn does not persist messages. A privacy wipe
+  /// bumps it so a stream that finishes afterwards cannot recreate the chat.
+  final AiActivityGuard? guard;
+
   Future<RagChatTurn> send({
     required String sessionId,
     required String question,
     required String language,
   }) async {
+    final seen = guard?.epoch;
+    bool stale() => guard != null && guard!.epoch != seen;
+
     final settings = await _repository.load();
-    if (!settings.isConfigured) {
+    if (!settings.isConfigured || stale()) {
       throw const LlmApiException('Chat model not configured');
     }
 
     // History window BEFORE this turn's user message lands.
-    final history = await _db.chatDao
-        .lastMessages(accountId, sessionId, historyMessages);
+    final history = await _db.chatDao.lastMessages(
+      accountId,
+      sessionId,
+      historyMessages,
+    );
 
     // Retrieval failures are non-fatal: chat degrades to no citations.
     List<ScoredMemo> hits = const [];
@@ -67,27 +79,41 @@ class RagChatEngine {
     final sources = [
       for (var i = 0; i < hits.length; i++)
         ChatSource(
-            // uid carries the full memo name ('memos/<id>') — Task 6's
-            // citation tap strips the prefix for navigation.
-            n: i + 1,
-            uid: hits[i].record.memo.name,
-            excerpt: clipText(hits[i].record.memo.content, excerptChars)),
+          // uid carries the full memo name ('memos/<id>') — Task 6's
+          // citation tap strips the prefix for navigation.
+          n: i + 1,
+          uid: hits[i].record.memo.name,
+          excerpt: clipText(hits[i].record.memo.content, excerptChars),
+        ),
     ];
 
     final messages = <LlmChatMessage>[
       LlmChatMessage(role: 'system', content: _systemPrompt(language)),
-      ...history.map((m) => LlmChatMessage(
+      ...history.map(
+        (m) => LlmChatMessage(
           role: m.role,
           // Same clip style as excerpts: the window bounds count, this
           // bounds per-message size (see [historyClipChars]).
-          content: clipText(m.content, historyClipChars))),
+          content: clipText(m.content, historyClipChars),
+        ),
+      ),
       LlmChatMessage(
-          role: 'user', content: _userPrompt(question, hits, language)),
+        role: 'user',
+        content: _userPrompt(question, hits, language),
+      ),
     ];
 
+    if (stale()) {
+      throw const LlmApiException('Chat model not configured');
+    }
     final now = DateTime.now();
-    await _db.chatDao.appendMessage(accountId, sessionId,
-        role: 'user', content: question, now: now);
+    await _db.chatDao.appendMessage(
+      accountId,
+      sessionId,
+      role: 'user',
+      content: question,
+      now: now,
+    );
 
     // Generation starts eagerly — the UI listens to [deltas] right after
     // `send` returns, and a buffered controller replays every chunk to
@@ -99,8 +125,10 @@ class RagChatEngine {
       final buffer = StringBuffer();
       Object? error;
       try {
-        await for (final chunk
-            in _repository.chatStream(settings, messages: messages)) {
+        await for (final chunk in _repository.chatStream(
+          settings,
+          messages: messages,
+        )) {
           buffer.write(chunk);
           controller.add(chunk);
         }
@@ -109,14 +137,19 @@ class RagChatEngine {
       }
       // Persist the assistant turn: the full answer on success, whatever
       // streamed before a failure (an empty failed stream leaves no
-      // message). The error itself is surfaced through `deltas`.
-      if (buffer.isNotEmpty || error == null) {
+      // message). The error itself is surfaced through `deltas`. A privacy
+      // wipe invalidates [guard] so this completion cannot recreate a chat
+      // that was just deleted.
+      if (!stale() && (buffer.isNotEmpty || error == null)) {
         try {
-          await _db.chatDao.appendMessage(accountId, sessionId,
-              role: 'assistant',
-              content: buffer.toString(),
-              sources: sources,
-              now: DateTime.now());
+          await _db.chatDao.appendMessage(
+            accountId,
+            sessionId,
+            role: 'assistant',
+            content: buffer.toString(),
+            sources: sources,
+            now: DateTime.now(),
+          );
         } catch (e) {
           error ??= e;
         }
@@ -135,24 +168,27 @@ class RagChatEngine {
 
   static String _systemPrompt(String language) => language == 'en'
       ? 'You are a warm journaling assistant answering ONLY from the '
-          'numbered memories quoted in the user message. Do not invent '
-          'facts; if the memories cannot answer, say so plainly. Cite the '
-          'memories you used as [1], [2] right after the claim. Reply in '
-          'English Markdown.'
+            'numbered memories quoted in the user message. Do not invent '
+            'facts; if the memories cannot answer, say so plainly. Cite the '
+            'memories you used as [1], [2] right after the claim. Reply in '
+            'English Markdown.'
       : '你是一位温暖的日记助手，仅基于用户消息中引用的编号记忆回答，不要编造事实；'
-          '记忆无法回答时明确说明。引用某条记忆时在相应结论后标注 [1]、[2] 编号。'
-          '用中文以 Markdown 回复。';
+            '记忆无法回答时明确说明。引用某条记忆时在相应结论后标注 [1]、[2] 编号。'
+            '用中文以 Markdown 回复。';
 
   static String _userPrompt(
-      String question, List<ScoredMemo> hits, String language) {
+    String question,
+    List<ScoredMemo> hits,
+    String language,
+  ) {
     // The question rides into every prompt; give it the same per-message
     // budget as history so a giant paste can't blow the context either.
     final q = clipText(question, historyClipChars);
     final b = StringBuffer();
     if (hits.isEmpty) {
-      b.writeln(language == 'en'
-          ? '(No related memories found.)'
-          : '（未找到相关记忆。）');
+      b.writeln(
+        language == 'en' ? '(No related memories found.)' : '（未找到相关记忆。）',
+      );
     } else {
       b.writeln(language == 'en' ? 'Related memories:' : '相关记忆：');
       for (var i = 0; i < hits.length; i++) {

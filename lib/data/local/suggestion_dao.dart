@@ -16,10 +16,8 @@ class MemoSuggestion {
 
 /// Defensive JSON codec: any malformed payload (bad JSON, mistyped fields)
 /// yields null instead of crashing (AGENTS.md rule).
-String suggestionToJson(MemoSuggestion s) => convert.jsonEncode({
-      'tags': s.tags,
-      'related': s.relatedUids,
-    });
+String suggestionToJson(MemoSuggestion s) =>
+    convert.jsonEncode({'tags': s.tags, 'related': s.relatedUids});
 
 MemoSuggestion? suggestionFromJson(String raw) {
   try {
@@ -29,8 +27,14 @@ MemoSuggestion? suggestionFromJson(String raw) {
     final related = json['related'];
     if (tags is! List || related is! List) return null;
     return MemoSuggestion(
-      tags: [for (final t in tags) if (t is String) t],
-      relatedUids: [for (final r in related) if (r is String) r],
+      tags: [
+        for (final t in tags)
+          if (t is String) t,
+      ],
+      relatedUids: [
+        for (final r in related)
+          if (r is String) r,
+      ],
     );
   } catch (_) {
     return null;
@@ -46,7 +50,10 @@ List<String> _stringList(String raw) {
   try {
     final json = convert.jsonDecode(raw);
     if (json is! List) return const [];
-    return [for (final e in json) if (e is String) e];
+    return [
+      for (final e in json)
+        if (e is String) e,
+    ];
   } catch (_) {
     return const [];
   }
@@ -59,10 +66,12 @@ class SuggestionDao extends DatabaseAccessor<AppDatabase>
     with _$SuggestionDaoMixin {
   SuggestionDao(super.db);
 
-  Stream<MemoSuggestionsRow?> watchSuggestion(String accountId, String memoUid) {
+  Stream<MemoSuggestionsRow?> watchSuggestion(
+    String accountId,
+    String memoUid,
+  ) {
     final query = select(memoSuggestions)
-      ..where((s) =>
-          s.accountId.equals(accountId) & s.memoUid.equals(memoUid));
+      ..where((s) => s.accountId.equals(accountId) & s.memoUid.equals(memoUid));
     return query.watchSingleOrNull();
   }
 
@@ -72,21 +81,22 @@ class SuggestionDao extends DatabaseAccessor<AppDatabase>
     required int contentHash,
     required MemoSuggestion suggestion,
     required DateTime now,
-  }) =>
-      into(memoSuggestions).insertOnConflictUpdate(
-        MemoSuggestionsCompanion.insert(
-          accountId: accountId,
-          memoUid: memoUid,
-          contentHash: contentHash,
-          tagsJson: Value(suggestion.tags.isEmpty
-              ? '[]'
-              : convert.jsonEncode(suggestion.tags)),
-          relatedUidsJson: Value(suggestion.relatedUids.isEmpty
-              ? '[]'
-              : convert.jsonEncode(suggestion.relatedUids)),
-          createdAt: now,
-        ),
-      );
+  }) => into(memoSuggestions).insertOnConflictUpdate(
+    MemoSuggestionsCompanion.insert(
+      accountId: accountId,
+      memoUid: memoUid,
+      contentHash: contentHash,
+      tagsJson: Value(
+        suggestion.tags.isEmpty ? '[]' : convert.jsonEncode(suggestion.tags),
+      ),
+      relatedUidsJson: Value(
+        suggestion.relatedUids.isEmpty
+            ? '[]'
+            : convert.jsonEncode(suggestion.relatedUids),
+      ),
+      createdAt: now,
+    ),
+  );
 
   /// The account's known tags (deduped, sorted) fed to the suggestion prompt.
   Future<List<String>> distinctTags(String accountId) async {
@@ -100,8 +110,12 @@ class SuggestionDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<void> deleteForMemo(String accountId, String memoUid) =>
-      (delete(memoSuggestions)
-            ..where((s) =>
-                s.accountId.equals(accountId) & s.memoUid.equals(memoUid)))
+      (delete(memoSuggestions)..where(
+            (s) => s.accountId.equals(accountId) & s.memoUid.equals(memoUid),
+          ))
           .go();
+
+  /// Removes every account's suggestion cache. LLM settings are global, so
+  /// a privacy wipe cannot leave another account's rows behind.
+  Future<void> deleteAll() => delete(memoSuggestions).go();
 }

@@ -26,7 +26,8 @@ class ReviewDigestInput {
   String fingerprint() {
     final parts = <String>[];
     void add(Memo m) => parts.add(
-        '${m.name}:${stableHash(m.content)}:${m.updateTime?.millisecondsSinceEpoch ?? m.createTime?.millisecondsSinceEpoch ?? 0}');
+      '${m.name}:${stableHash(m.content)}:${m.updateTime?.millisecondsSinceEpoch ?? m.createTime?.millisecondsSinceEpoch ?? 0}',
+    );
     for (final m in today) {
       add(m);
     }
@@ -42,13 +43,13 @@ class ReviewDigestInput {
 /// System prompt for the digest. [language] is an ISO code ('zh' / 'en').
 String reviewDigestSystemPrompt(String language) => language == 'en'
     ? 'You are a warm, concise journaling assistant. Answer ONLY from the '
-      'memories provided in the user message; do not invent facts. Reply in '
-      'English using Markdown with two sections: "Today" (3-5 bullet key '
-      'points from today\'s memos) and, when past-year memories are present, '
-      '"Echoes" (connections between today and those memories).'
+          'memories provided in the user message; do not invent facts. Reply in '
+          'English using Markdown with two sections: "Today" (3-5 bullet key '
+          'points from today\'s memos) and, when past-year memories are present, '
+          '"Echoes" (connections between today and those memories).'
     : '你是一位温暖、简洁的日记助手。只依据用户消息中给出的记忆回答，不要编造事实。'
-      '用中文以 Markdown 回复，包含两个小节："今日要点"（今天的笔记提炼 3-5 条要点）；'
-      '若提供了往年今日的记忆，再加"记忆呼应"小节，点出今天的记录与往年记忆的关联。';
+          '用中文以 Markdown 回复，包含两个小节："今日要点"（今天的笔记提炼 3-5 条要点）；'
+          '若提供了往年今日的记忆，再加"记忆呼应"小节，点出今天的记录与往年记忆的关联。';
 
 /// Renders the input memos into the user message: today's memos first, then
 /// past-year groups, each memo clipped to [_maxCharsPerMemo] characters and
@@ -76,8 +77,7 @@ String buildReviewDigestUserPrompt(
     } else {
       b.writeln('\n往年的今天，用户写过：');
     }
-    final years = input.onThisDay.keys.toList()
-      ..sort((a, b) => b.compareTo(a));
+    final years = input.onThisDay.keys.toList()..sort((a, b) => b.compareTo(a));
     for (final year in years) {
       for (final memo in input.onThisDay[year]!.take(_maxMemosPerGroup)) {
         b.writeln('- [$year] ${clipText(memo.content, _maxCharsPerMemo)}');
@@ -102,10 +102,10 @@ class ReviewDigestEntry {
   final DateTime generatedAt;
 
   Map<String, dynamic> toJson() => {
-        'content': content,
-        'fingerprint': fingerprint,
-        'generatedAt': generatedAt.toIso8601String(),
-      };
+    'content': content,
+    'fingerprint': fingerprint,
+    'generatedAt': generatedAt.toIso8601String(),
+  };
 
   factory ReviewDigestEntry.fromJson(Map<String, dynamic> json) =>
       ReviewDigestEntry(
@@ -113,7 +113,7 @@ class ReviewDigestEntry {
         fingerprint: json['fingerprint'] as String? ?? '',
         generatedAt:
             DateTime.tryParse(json['generatedAt'] as String? ?? '') ??
-                DateTime.fromMillisecondsSinceEpoch(0),
+            DateTime.fromMillisecondsSinceEpoch(0),
       );
 }
 
@@ -123,8 +123,7 @@ class ReviewDigestEntry {
 class ReviewDigestCache {
   static const _prefix = 'memos_go.reviewDigest.';
 
-  String _key(String accountId, String dayKey) =>
-      '$_prefix$accountId.$dayKey';
+  String _key(String accountId, String dayKey) => '$_prefix$accountId.$dayKey';
 
   Future<ReviewDigestEntry?> load(String accountId, String dayKey) async {
     final prefs = await SharedPreferences.getInstance();
@@ -141,15 +140,35 @@ class ReviewDigestCache {
     return null;
   }
 
-  Future<void> save(String accountId, String dayKey, ReviewDigestEntry entry) async {
+  Future<void> save(
+    String accountId,
+    String dayKey,
+    ReviewDigestEntry entry,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-        _key(accountId, dayKey), convert.jsonEncode(entry.toJson()));
+      _key(accountId, dayKey),
+      convert.jsonEncode(entry.toJson()),
+    );
     final accountPrefix = '$_prefix$accountId.';
-    final keys = prefs.getKeys().where((k) => k.startsWith(accountPrefix)).toList()
-      ..sort();
+    final keys =
+        prefs.getKeys().where((k) => k.startsWith(accountPrefix)).toList()
+          ..sort();
     while (keys.length > 7) {
       await prefs.remove(keys.removeAt(0));
+    }
+  }
+
+  /// Removes every account's cached digests. LLM settings are global, so a
+  /// privacy wipe cannot leave another account's summaries behind.
+  Future<void> clearAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = [
+      for (final key in prefs.getKeys())
+        if (key.startsWith(_prefix)) key,
+    ];
+    for (final key in keys) {
+      await prefs.remove(key);
     }
   }
 }

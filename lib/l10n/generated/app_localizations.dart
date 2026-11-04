@@ -977,7 +977,7 @@ abstract class AppLocalizations {
   /// No description provided for @llmClearConfirm.
   ///
   /// In zh, this message translates to:
-  /// **'清除 AI 助手配置？'**
+  /// **'清除 AI 助手配置？本机保存的向量、AI 对话、保存建议和每日摘要也会一并删除。'**
   String get llmClearConfirm;
 
   /// No description provided for @digestTitle.

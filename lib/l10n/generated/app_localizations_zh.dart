@@ -465,7 +465,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get llmClear => '清除配置';
 
   @override
-  String get llmClearConfirm => '清除 AI 助手配置？';
+  String get llmClearConfirm => '清除 AI 助手配置？本机保存的向量、AI 对话、保存建议和每日摘要也会一并删除。';
 
   @override
   String get digestTitle => 'AI 摘要';

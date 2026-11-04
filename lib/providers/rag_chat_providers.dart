@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/llm/rag_chat_engine.dart';
+import 'ai_privacy_providers.dart';
 import 'auth_providers.dart';
 import 'llm_providers.dart';
 import 'retrieval_providers.dart';
@@ -15,5 +16,6 @@ final ragChatEngineProvider = Provider<RagChatEngine?>((ref) {
     db: ref.watch(appDatabaseProvider),
     repository: ref.watch(llmRepositoryProvider),
     retrieval: ref.watch(retrievalServiceProvider),
+    guard: ref.watch(aiActivityGuardProvider),
   );
 });
