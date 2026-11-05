@@ -28,7 +28,7 @@ flutter run              # iOS 模拟器或 Android 设备
 - `data/models/` — JSON 模型，一律防御性解析（字段缺失/类型不符不能崩）。
 - `data/repositories/` — 登录/多账号、memo 仓库。`CachedMemoRepository` 是本地优先门面（UI 一律经它）：读全走本地库（`watchMemosPage`/`watchMemo` 响应式流），写先打服务端、`isNetworkFailure` 时降级进 pending 队列；附件上传离线时落盘排队（`Attachment.localPath` 标记，UI 直接从本地文件渲染）。
 - `providers/` — Riverpod providers（会话、分页列表、标签、设置、`sync_providers.dart` 的引擎/在线状态/`syncStatusProvider`、`llm_providers.dart`、`vectorization_providers.dart`、`semantic_search_providers.dart`、`rag_chat_providers.dart`、`retrieval_providers.dart`、`suggestion_providers.dart`、`memo_suggestion_providers.dart`）。
-- `features/<功能>/` — 页面级 UI，按功能分目录（drawer / memos / editor / detail / search / review / trash / settings / login）。
+- `features/<功能>/` — 页面级 UI，按功能分目录（shell / memos / me / editor / detail / search / review / trash / settings / login）。`features/drawer/` 只留热力图和标签树纯逻辑。
 
 依赖方向：features → providers → repositories → api/local/models；core 被各层复用。UI 不直接调 dio。
 
@@ -40,7 +40,7 @@ flutter run              # iOS 模拟器或 Android 设备
 - **i18n**：Flutter gen-l10n，模板语言是**中文**（`lib/l10n/app_zh.arb`，英文在 `app_en.arb`）。生成物 `lib/l10n/generated/` 已提交入库，跑 `flutter gen-l10n` 后记得提交生成文件。用户可见字符串不要硬编码，走 `AppLocalizations`。
 - **标签路由参数需 percent-encode**（`/memos/tag/:tag`），嵌套标签（含 `/`）导航曾因此出过 bug，改路由时对照 `test/tag_route_test.dart`。
 - **认证流**：密码登录拿到短时 JWT 后立即创建永不过期的 PAT，只保存 PAT 不保存密码；旧版服务器（v0.25–0.30 无 PAT 接口）降级保存 JWT。凭据一律存 flutter_secure_storage（Keychain/Keystore），禁止落盘明文。
-- **UI 风格**：flomo 式抽屉导航 + 卡片流（见 `features/drawer/`），Material 3，亮/暗/跟随系统主题。
+- **UI 风格**：底部一级导航（笔记 / 搜索 / 撰写 / 回顾 / 我的）+ 卡片流，Material 3，亮/暗/跟随系统主题。标签目录、统计热力图在「我的」（`features/me/`）；每日回顾、AI 对话、随机漫步从「回顾」进入。
 
 ## 平台注意事项
 

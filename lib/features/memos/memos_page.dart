@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../l10n/generated/app_localizations.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -15,80 +16,21 @@ import '../../data/repositories/memo_repository.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/memo_providers.dart';
 import '../../providers/sync_providers.dart';
-import '../drawer/app_drawer.dart';
-import 'voice_memo_capture.dart';
 
-class MemosPage extends ConsumerStatefulWidget {
+class MemosPage extends ConsumerWidget {
   const MemosPage({super.key});
 
   @override
-  ConsumerState<MemosPage> createState() => _MemosPageState();
-}
-
-class _MemosPageState extends ConsumerState<MemosPage> {
-  var _voiceBusy = false;
-
-  /// Long-press on the "+" FAB: record → transcribe → memo, no editor.
-  Future<void> _quickVoiceMemo() async {
-    if (_voiceBusy) return;
-    HapticFeedback.mediumImpact();
-    setState(() => _voiceBusy = true);
-    try {
-      await captureVoiceMemo(context, ref);
-    } finally {
-      if (mounted) setState(() => _voiceBusy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final query = MemosQuery();
     final list = ref.watch(memosListProvider(query));
     final repo = ref.watch(memoRepositoryProvider);
 
     return Scaffold(
-      drawer: const AppDrawer(),
-      appBar: AppBar(
-        leading: Builder(
-          builder: (context) => IconButton(
-            tooltip: l10n.allMemos,
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-        title: Text(l10n.appTitle),
-        actions: [
-          IconButton(
-            tooltip: l10n.searchTitle,
-            icon: const Icon(Icons.search),
-            onPressed: () => context.push('/search'),
-          ),
-        ],
-      ),
-      floatingActionButton: GestureDetector(
-        // Long-press starts quick voice capture; taps fall through to the
-        // FAB's own onPressed. The hint rides on Semantics because a FAB
-        // tooltip registers its own long-press recognizer, which would win
-        // the gesture arena over this one.
-        onLongPress: _voiceBusy ? null : _quickVoiceMemo,
-        child: Semantics(
-          label: l10n.newMemoFabTooltip,
-          child: FloatingActionButton(
-            onPressed: _voiceBusy ? null : () => context.push('/memos/new'),
-            child: _voiceBusy
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.4),
-                  )
-                : const Icon(Icons.add, size: 30),
-          ),
-        ),
-      ),
+      appBar: AppBar(title: Text(l10n.appTitle)),
       body: Column(
         children: [
-          const _FeaturePills(),
           const SyncBanner(),
           Expanded(
             child: MemosFeedBody(query: query, list: list, repo: repo),
@@ -99,7 +41,7 @@ class _MemosPageState extends ConsumerState<MemosPage> {
   }
 }
 
-/// Thin status strip under the feature pills: offline notice, pending-sync
+/// Thin status strip under the app bar: offline notice, pending-sync
 /// count with a "sync now" action, or a syncing indicator.
 class SyncBanner extends ConsumerWidget {
   const SyncBanner({super.key});
@@ -109,15 +51,18 @@ class SyncBanner extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final status = ref.watch(syncStatusProvider);
-    if (status.online && status.pendingCount == 0) return const SizedBox.shrink();
+    if (status.online && status.pendingCount == 0) {
+      return const SizedBox.shrink();
+    }
 
     final Widget icon;
     final String text;
     if (status.syncing) {
       icon = const SizedBox(
-          width: 14,
-          height: 14,
-          child: CircularProgressIndicator(strokeWidth: 2));
+        width: 14,
+        height: 14,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
       text = l10n.syncingNow;
     } else if (!status.online) {
       icon = const Icon(Icons.cloud_off_outlined, size: 15);
@@ -150,81 +95,9 @@ class SyncBanner extends ConsumerWidget {
                           : ''),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Flomo-style entry pills below the app bar.
-class _FeaturePills extends StatelessWidget {
-  const _FeaturePills();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return SizedBox(
-      height: 46,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-        children: [
-          _Pill(
-            icon: Icons.calendar_today_outlined,
-            label: l10n.dailyReview,
-            onTap: () => context.push('/review'),
-          ),
-          const SizedBox(width: 8),
-          _Pill(
-            icon: Icons.shuffle_rounded,
-            label: l10n.randomWalk,
-            onTap: () => context.push('/random'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Pill extends StatelessWidget {
-  const _Pill({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface,
-      shape: StadiumBorder(
-        side: BorderSide(color: theme.colorScheme.outlineVariant),
-      ),
-      child: InkWell(
-        customBorder: const StadiumBorder(),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Row(
-            children: [
-              Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: theme.colorScheme.onSurfaceVariant,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ],
@@ -237,7 +110,12 @@ class _Pill extends StatelessWidget {
 
 /// Reusable paginated memo feed used by the home tab and tag views.
 class MemosFeedBody extends ConsumerWidget {
-  const MemosFeedBody({super.key, required this.query, required this.list, this.repo});
+  const MemosFeedBody({
+    super.key,
+    required this.query,
+    required this.list,
+    this.repo,
+  });
 
   final MemosQuery query;
   final MemosListState list;
@@ -285,10 +163,12 @@ class MemosFeedBody extends ConsumerWidget {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
               child: Center(
-                  child: SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2))),
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
             );
           }
           final memo = list.memos[index];
@@ -304,8 +184,12 @@ class MemosFeedBody extends ConsumerWidget {
 }
 
 class _MessageView extends StatelessWidget {
-  const _MessageView(
-      {required this.icon, required this.title, this.detail, this.action});
+  const _MessageView({
+    required this.icon,
+    required this.title,
+    this.detail,
+    this.action,
+  });
 
   final IconData icon;
   final String title;
@@ -323,16 +207,20 @@ class _MessageView extends StatelessWidget {
           children: [
             Icon(icon, size: 56, color: theme.colorScheme.onSurfaceVariant),
             const SizedBox(height: 12),
-            Text(title,
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w600)),
+            Text(
+              title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             if (detail != null) ...[
               const SizedBox(height: 6),
               Text(
                 detail!,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
             if (action != null) ...[const SizedBox(height: 16), action!],
@@ -376,8 +264,11 @@ class MemoCard extends ConsumerWidget {
                   if (memo.pinned)
                     Padding(
                       padding: const EdgeInsets.only(right: 6),
-                      child: Icon(Icons.push_pin_rounded,
-                          size: 14, color: theme.colorScheme.primary),
+                      child: Icon(
+                        Icons.push_pin_rounded,
+                        size: 14,
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
                   Expanded(
                     child: Text(
@@ -393,30 +284,40 @@ class MemoCard extends ConsumerWidget {
                       padding: const EdgeInsets.only(right: 4),
                       child: Tooltip(
                         message: l10n.pendingBadgeTooltip,
-                        child: Icon(Icons.cloud_upload_outlined,
-                            size: 14, color: theme.colorScheme.tertiary),
+                        child: Icon(
+                          Icons.cloud_upload_outlined,
+                          size: 14,
+                          color: theme.colorScheme.tertiary,
+                        ),
                       ),
                     ),
                   if (memo.visibility != MemoVisibility.private)
                     Padding(
                       padding: const EdgeInsets.only(right: 2),
                       child: VisibilityBadge(
-                          visibility: memo.visibility, compact: true),
+                        visibility: memo.visibility,
+                        compact: true,
+                      ),
                     ),
                   PopupMenuButton<String>(
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 160),
-                    icon: Icon(Icons.more_horiz,
-                        size: 22, color: theme.colorScheme.onSurfaceVariant),
+                    icon: Icon(
+                      Icons.more_horiz,
+                      size: 22,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                     onSelected: (action) => _onAction(context, ref, action),
                     itemBuilder: (context) => [
                       PopupMenuItem(
                         value: 'pin',
                         child: Row(
                           children: [
-                            Icon(memo.pinned
-                                ? Icons.push_pin_outlined
-                                : Icons.push_pin_rounded),
+                            Icon(
+                              memo.pinned
+                                  ? Icons.push_pin_outlined
+                                  : Icons.push_pin_rounded,
+                            ),
                             const SizedBox(width: 12),
                             Text(memo.pinned ? l10n.unpin : l10n.pin),
                           ],
@@ -436,12 +337,15 @@ class MemoCard extends ConsumerWidget {
                         value: 'delete',
                         child: Row(
                           children: [
-                            Icon(Icons.delete_outline,
-                                color: theme.colorScheme.error),
+                            Icon(
+                              Icons.delete_outline,
+                              color: theme.colorScheme.error,
+                            ),
                             const SizedBox(width: 12),
-                            Text(l10n.delete,
-                                style:
-                                    TextStyle(color: theme.colorScheme.error)),
+                            Text(
+                              l10n.delete,
+                              style: TextStyle(color: theme.colorScheme.error),
+                            ),
                           ],
                         ),
                       ),
@@ -478,7 +382,10 @@ class MemoCard extends ConsumerWidget {
   }
 
   Future<void> _onAction(
-      BuildContext context, WidgetRef ref, String action) async {
+    BuildContext context,
+    WidgetRef ref,
+    String action,
+  ) async {
     final l10n = AppLocalizations.of(context)!;
     switch (action) {
       case 'pin':

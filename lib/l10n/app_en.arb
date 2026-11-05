@@ -20,7 +20,7 @@
   "logining": "Signing in…",
   "serverUnreachable": "Cannot reach the server, check the address and network",
   "emptyMemoTitle": "No memos yet",
-  "emptyMemoSubtitle": "Tap the button below to write your first memo",
+  "emptyMemoSubtitle": "Tap Compose below to write your first memo",
   "loadFailed": "Failed to load",
   "retry": "Retry",
   "newMemo": "New memo",
@@ -247,5 +247,8 @@
   "syncNow": "Sync now",
   "pendingBadgeTooltip": "Pending sync",
   "savedOffline": "Saved — will sync when online",
-  "voiceMemoUntitled": "Voice memo"
+  "voiceMemoUntitled": "Voice memo",
+  "navCompose": "Compose",
+  "navReview": "Review",
+  "navMe": "Me"
 }

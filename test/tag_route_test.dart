@@ -61,6 +61,25 @@ void main() {
     }
   });
 
+  test('primary destinations and legacy paths still match', () {
+    for (final location in [
+      '/memos',
+      '/search',
+      '/review',
+      '/settings',
+      '/settings/asr',
+      '/settings/llm',
+      '/trash',
+      '/random',
+      '/chat',
+      '/login',
+      '/memos/detail/abc',
+      '/memos/edit/abc',
+    ]) {
+      expect(matchFor(location).error, isNull, reason: location);
+    }
+  });
+
   test('unencoded reserved characters corrupt the prefilled tag', () {
     // `#` starts the fragment, so a raw tag silently truncates instead of
     // matching the intended value.
