@@ -139,6 +139,25 @@ void main() {
     expect(acc1Keys.length, 7);
   });
 
+  test('clearAll removes every account and leaves unrelated keys', () async {
+    SharedPreferences.setMockInitialValues({'settings.themeMode': 'dark'});
+    final cache = ReviewDigestCache();
+    final entry = ReviewDigestEntry(
+      content: 'summary',
+      fingerprint: 'fp',
+      generatedAt: DateTime(2026, 10, 14),
+    );
+    await cache.save('acc-1', '2026-10-14', entry);
+    await cache.save('acc-2', '2026-10-13', entry);
+
+    await cache.clearAll();
+
+    expect(await cache.load('acc-1', '2026-10-14'), isNull);
+    expect(await cache.load('acc-2', '2026-10-13'), isNull);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('settings.themeMode'), 'dark');
+  });
+
   test('cache returns null on corrupt or missing data', () async {
     SharedPreferences.setMockInitialValues({
       'memos_go.reviewDigest.acc-1.2026-10-14': '{not json',

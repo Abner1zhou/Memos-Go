@@ -90,8 +90,8 @@ class VectorizationEngine {
 
   bool _running = false;
   bool _paused = false;
-  // Bumped by clearVectors so an in-flight pass stops instead of
-  // resurrecting the rows the clear just deleted.
+  // Bumped by clearVectors and abandonInFlight so an in-flight pass stops
+  // instead of resurrecting rows a wipe just deleted.
   int _generation = 0;
   Timer? _debounce;
   StreamSubscription<void>? _corpusSub;
@@ -116,8 +116,9 @@ class VectorizationEngine {
   Future<void> run() async {
     if (_running || _paused) return;
     _running = true;
+    // Declared outside try so the catch can see a wipe that landed mid-pass.
+    final generation = _generation;
     try {
-      final generation = _generation;
       final settings = await _repository.load();
       final model = settings.embeddingModel.trim();
       if (!settings.embeddingsConfigured) {
@@ -210,6 +211,9 @@ class VectorizationEngine {
         ),
       );
     } catch (e) {
+      // A pause or privacy wipe that landed during this pass owns the
+      // notifier; don't overwrite it with an error from the abandoned work.
+      if (_paused || generation != _generation) return;
       // Last resort: settings/corpus reads must never crash the caller.
       _state(
         state.value.copyWith(
@@ -245,6 +249,17 @@ class VectorizationEngine {
     _paused = true;
     await _dao.deleteAllForAccount(accountId);
     _state(const VectorizationState(status: VectorStatus.paused));
+  }
+
+  /// Stops a debounced or in-flight pass so it cannot write vectors after a
+  /// privacy wipe. Unlike [clearVectors], this does not pause later passes
+  /// and does not delete rows (the wipe deletes every account).
+  void abandonInFlight() {
+    _debounce?.cancel();
+    _generation++;
+    if (!_paused) {
+      _state(const VectorizationState());
+    }
   }
 
   Future<void> dispose() async {

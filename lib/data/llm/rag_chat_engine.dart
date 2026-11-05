@@ -5,6 +5,7 @@ import '../api/llm_api.dart';
 import '../local/app_database.dart';
 import '../local/chat_dao.dart';
 import '../repositories/llm_repository.dart';
+import 'ai_activity_guard.dart';
 import 'retrieval.dart';
 
 /// One in-flight turn: citations known up front + the answer stream. The
@@ -27,6 +28,7 @@ class RagChatEngine {
     required this._db,
     required this._repository,
     required this._retrieval,
+    this.guard,
   });
 
   static const excerptChars = 400;
@@ -43,13 +45,20 @@ class RagChatEngine {
   final LlmRepository _repository;
   final RetrievalService _retrieval;
 
+  /// When invalidated, this turn does not persist messages. A privacy wipe
+  /// bumps it so a stream that finishes afterwards cannot recreate the chat.
+  final AiActivityGuard? guard;
+
   Future<RagChatTurn> send({
     required String sessionId,
     required String question,
     required String language,
   }) async {
+    final seen = guard?.epoch;
+    bool stale() => guard != null && guard!.epoch != seen;
+
     final settings = await _repository.load();
-    if (!settings.isConfigured) {
+    if (!settings.isConfigured || stale()) {
       throw const LlmApiException('Chat model not configured');
     }
 
@@ -85,6 +94,9 @@ class RagChatEngine {
           role: 'user', content: _userPrompt(question, hits, language)),
     ];
 
+    if (stale()) {
+      throw const LlmApiException('Chat model not configured');
+    }
     final now = DateTime.now();
     await _db.chatDao.appendMessage(accountId, sessionId,
         role: 'user', content: question, now: now);
@@ -109,8 +121,10 @@ class RagChatEngine {
       }
       // Persist the assistant turn: the full answer on success, whatever
       // streamed before a failure (an empty failed stream leaves no
-      // message). The error itself is surfaced through `deltas`.
-      if (buffer.isNotEmpty || error == null) {
+      // message). The error itself is surfaced through `deltas`. A privacy
+      // wipe invalidates [guard] so this completion cannot recreate a chat
+      // that was just deleted.
+      if (!stale() && (buffer.isNotEmpty || error == null)) {
         try {
           await _db.chatDao.appendMessage(accountId, sessionId,
               role: 'assistant',

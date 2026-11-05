@@ -188,7 +188,7 @@
   "llmTestFailed": "接口测试失败",
   "llmInvalidBaseUrl": "接口地址无效，需以 http(s):// 开头",
   "llmClear": "清除配置",
-  "llmClearConfirm": "清除 AI 助手配置？",
+  "llmClearConfirm": "清除 AI 助手配置？本机保存的向量、AI 对话、保存建议和每日摘要也会一并删除。",
   "digestTitle": "AI 摘要",
   "digestGenerate": "生成 AI 摘要",
   "digestRegenerate": "重新生成",

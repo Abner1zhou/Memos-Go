@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert' show JsonDecoder;
+import 'dart:ui' show Locale;
 
 import 'package:flutter/foundation.dart';
 
@@ -10,6 +11,7 @@ import '../local/app_database.dart';
 import '../local/memo_codec.dart' show MemoRecord;
 import '../local/suggestion_dao.dart';
 import '../repositories/llm_repository.dart';
+import 'ai_activity_guard.dart';
 import 'retrieval.dart';
 
 /// Parses the model's suggestion output: strips ```json fences, extracts
@@ -83,18 +85,52 @@ Object? _decodeJson(String src) {
 Object? _jsonDecode(String src) => _decoder.convert(src);
 const _decoder = JsonDecoder();
 
+/// Prompt language for save-time suggestions.
+///
+/// [localeCode] is the user setting (`''` follows the system). Only `en`
+/// and `zh` are supported, matching the app UI: an explicit setting wins;
+/// otherwise the first supported language in [platformLocales]; otherwise
+/// English, which is the first entry of `AppLocalizations.supportedLocales`
+/// and therefore MaterialApp's fallback.
+String resolveSuggestionLanguage({
+  required String localeCode,
+  Iterable<Locale> platformLocales = const [],
+}) {
+  if (localeCode == 'en' || localeCode == 'zh') return localeCode;
+  for (final locale in platformLocales) {
+    final code = locale.languageCode;
+    if (code == 'en' || code == 'zh') return code;
+  }
+  return 'en';
+}
+
+/// Collapses a language tag to the two prompt variants this engine knows.
+String normalizeSuggestionLanguage(String raw) {
+  final code = raw.trim().toLowerCase().replaceAll('_', '-');
+  if (code == 'en' || code.startsWith('en-')) return 'en';
+  return 'zh';
+}
+
 /// Save-time suggestions per spec §7: watches the corpus stream with a
 /// uid→contentHash snapshot; the FIRST emission only seeds the snapshot
 /// (no backfill of the existing corpus), later new/changed memos are
 /// queued, debounced, and each gets one retrieval + one JSON completion.
 /// Failures are silent (lastError), never blocking, never retried.
+///
+/// The debounce timer calls [SuggestionEngine.run] with no language, so
+/// each drain reads [SuggestionEngine.language] (the app locale) at fire
+/// time.
 class SuggestionEngine {
   SuggestionEngine({
     required this.accountId,
     required this._db,
     required this._repository,
     required this._retrieval,
-  });
+    String Function()? language,
+    this.guard,
+  }) : language = language ?? _defaultLanguage;
+
+  static String _defaultLanguage() => 'zh';
 
   static const debounce = Duration(seconds: 5);
   static const candidateCount = 6;
@@ -104,6 +140,14 @@ class SuggestionEngine {
   final AppDatabase _db;
   final LlmRepository _repository;
   final RetrievalService _retrieval;
+
+  /// Prompt language (`en` or `zh`) read at the start of each drain.
+  final String Function() language;
+
+  /// When invalidated, an in-flight drain drops its writes. A privacy wipe
+  /// bumps this so a completion that returns after the cache is deleted
+  /// cannot recreate the row.
+  final AiActivityGuard? guard;
 
   final lastError = ValueNotifier<String?>(null);
 
@@ -149,18 +193,30 @@ class SuggestionEngine {
   }
 
   /// Runs one drain of the queue. Never throws.
-  Future<void> run({String language = 'zh'}) async {
+  ///
+  /// [language] overrides [SuggestionEngine.language] for this drain. The
+  /// debounce timer calls [run] with no arguments, so it follows the callback.
+  Future<void> run({String? language}) async {
     if (_running) return;
     _running = true;
+    final promptLanguage =
+        normalizeSuggestionLanguage(language ?? this.language());
+    final seen = guard?.epoch;
+    bool stale() => guard != null && guard!.epoch != seen;
     try {
       final settings = await _repository.load();
-      if (!settings.isConfigured ||
+      if (stale() ||
+          !settings.isConfigured ||
           !settings.suggestOnSave ||
           !settings.embeddingsConfigured) {
         _pending.clear();
         return;
       }
       while (_pending.isNotEmpty) {
+        if (stale()) {
+          _pending.clear();
+          return;
+        }
         final uid = _pending.first;
         _pending.remove(uid);
         try {
@@ -189,17 +245,22 @@ class SuggestionEngine {
           final answer = await _repository.chat(
             settings,
             messages: [
-              LlmChatMessage(role: 'system', content: _systemPrompt(language)),
+              LlmChatMessage(
+                  role: 'system', content: _systemPrompt(promptLanguage)),
               LlmChatMessage(
                   role: 'user',
                   content: _userPrompt(
                       content,
                       tags,
                       [for (final h in hits) h.record],
-                      language)),
+                      promptLanguage)),
             ],
             maxTokens: 256,
           );
+          if (stale()) {
+            _pending.clear();
+            return;
+          }
           final suggestion = parseSuggestion(answer,
               candidateUids: candidateUids, selfName: record.memo.name);
           // 无论建议是否为空都落库：空建议行也是"这一版内容已算过"的缓存标记，

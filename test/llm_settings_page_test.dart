@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:memos_go/data/llm/vectorization_engine.dart';
 import 'package:memos_go/features/settings/llm_settings_page.dart';
 import 'package:memos_go/l10n/generated/app_localizations.dart';
+import 'package:memos_go/providers/ai_privacy_providers.dart';
 import 'package:memos_go/providers/llm_providers.dart';
 import 'package:memos_go/providers/vectorization_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,16 +16,23 @@ import 'fake_secure_storage.dart';
 void main() {
   late FakeSecureStorage storage;
   late ProviderContainer container;
+  late List<int> wipes;
 
   setUp(() {
     storage = FakeSecureStorage();
     FlutterSecureStoragePlatform.instance = storage;
     SharedPreferences.setMockInitialValues({});
+    wipes = [];
     // The real engine starts a debounce Timer on construction, which the
     // test binding forbids; the semantic-section test only exercises the
     // settings-driven UI, so no engine at all.
     container = ProviderContainer(overrides: [
       vectorizationEngineProvider.overrideWithValue(null),
+      aiArtifactWiperProvider.overrideWith((ref) {
+        return () async {
+          wipes.add(1);
+        };
+      }),
     ]);
   });
 
@@ -134,6 +142,65 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(container.read(llmProvider).isConfigured, isFalse);
+    expect(wipes, isEmpty);
+  });
+
+  testWidgets('clearing settings confirms, then wipes local AI artifacts',
+      (tester) async {
+    storage.values['memos_go.llmConfig'] =
+        '{"baseUrl":"https://api.deepseek.com/v1","apiKey":"sk-secret",'
+        '"chatModel":"deepseek-chat","embeddingModel":"e"}';
+    await pumpPage(tester);
+
+    await tester.tap(find.widgetWithText(TextButton, '清除配置'));
+    await tester.pump();
+    expect(find.textContaining('本机保存的向量'), findsOneWidget);
+
+    await tester.tap(find.text('取消'));
+    await tester.pump();
+    expect(wipes, isEmpty);
+    expect(storage.values.containsKey('memos_go.llmConfig'), isTrue);
+
+    await tester.tap(find.widgetWithText(TextButton, '清除配置'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, '确定'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(wipes, [1]);
+    expect(storage.values.containsKey('memos_go.llmConfig'), isFalse);
+    expect(container.read(llmProvider).isConfigured, isFalse);
+    expect(
+      tester
+          .widget<TextFormField>(find.byType(TextFormField).at(1))
+          .controller!
+          .text,
+      isEmpty,
+    );
+  });
+
+  testWidgets('saving an empty form after a config existed also wipes',
+      (tester) async {
+    storage.values['memos_go.llmConfig'] =
+        '{"baseUrl":"https://api.deepseek.com/v1","apiKey":"sk-secret",'
+        '"chatModel":"deepseek-chat","embeddingModel":"e"}';
+    await pumpPage(tester);
+
+    for (var i = 0; i < 4; i++) {
+      await tester.enterText(find.byType(TextFormField).at(i), '');
+    }
+    await tester.tap(find.widgetWithText(FilledButton, '保存'));
+    await tester.pump();
+    expect(find.textContaining('本机保存的向量'), findsOneWidget);
+    expect(wipes, isEmpty);
+
+    await tester.tap(find.widgetWithText(FilledButton, '确定'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(wipes, [1]);
+    expect(container.read(llmProvider).isConfigured, isFalse);
+    expect(storage.values['memos_go.llmConfig'], contains('"apiKey":""'));
   });
 
   testWidgets('semantic section shows progress and privacy note once an '

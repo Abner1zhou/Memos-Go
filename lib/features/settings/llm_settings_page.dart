@@ -7,6 +7,7 @@ import '../../core/utils/llm_errors.dart';
 import '../../data/api/llm_api.dart';
 import '../../data/llm/vectorization_engine.dart';
 import '../../data/repositories/llm_repository.dart';
+import '../../providers/ai_privacy_providers.dart';
 import '../../providers/llm_providers.dart';
 import '../../providers/vectorization_providers.dart';
 
@@ -27,6 +28,7 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
 
   var _busy = false;
   var _suggestOnSave = true;
+  var _hadConfiguredLlm = false;
   String? _error;
 
   @override
@@ -39,7 +41,10 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
       _apiKeyController.text = settings.apiKey;
       _chatModelController.text = settings.chatModel;
       _embeddingModelController.text = settings.embeddingModel;
-      setState(() => _suggestOnSave = settings.suggestOnSave);
+      setState(() {
+        _suggestOnSave = settings.suggestOnSave;
+        _hadConfiguredLlm = settings.isConfigured;
+      });
     });
   }
 
@@ -116,11 +121,36 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
     setState(() => _error = null);
     final settings = _validate();
     if (settings == null) return;
+    if (_hadConfiguredLlm && !settings.isConfigured) {
+      if (!await _confirmPrivacyWipe()) return;
+      if (!mounted) return;
+      await _wipeAiArtifacts();
+    }
     await ref.read(llmProvider.notifier).save(settings);
+    _hadConfiguredLlm = settings.isConfigured;
     if (mounted && context.canPop()) context.pop();
   }
 
   Future<void> _clear() async {
+    if (!await _confirmPrivacyWipe()) return;
+    if (!mounted) return;
+    await _wipeAiArtifacts();
+    await ref.read(llmProvider.notifier).clear();
+    if (!mounted) return;
+    setState(() {
+      _baseUrlController.clear();
+      _apiKeyController.clear();
+      _chatModelController.clear();
+      _embeddingModelController.clear();
+      _suggestOnSave = true;
+      _hadConfiguredLlm = false;
+      _error = null;
+    });
+  }
+
+  /// Confirms clearing credentials and the local AI artifacts that depended
+  /// on them. Returns false when the dialog is dismissed.
+  Future<bool> _confirmPrivacyWipe() async {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -138,18 +168,10 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
         ],
       ),
     );
-    if (confirmed != true) return;
-    await ref.read(llmProvider.notifier).clear();
-    if (!mounted) return;
-    setState(() {
-      _baseUrlController.clear();
-      _apiKeyController.clear();
-      _chatModelController.clear();
-      _embeddingModelController.clear();
-      _suggestOnSave = true;
-      _error = null;
-    });
+    return confirmed == true;
   }
+
+  Future<void> _wipeAiArtifacts() => ref.read(aiArtifactWiperProvider)();
 
   Future<void> _clearVectors(
       BuildContext context, VectorizationEngine? engine) async {

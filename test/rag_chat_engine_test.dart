@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:memos_go/data/api/llm_api.dart';
+import 'package:memos_go/data/llm/ai_activity_guard.dart';
 import 'package:memos_go/data/llm/rag_chat_engine.dart';
 import 'package:memos_go/data/llm/retrieval.dart';
 import 'package:memos_go/data/local/app_database.dart';
@@ -242,6 +243,28 @@ void main() {
         bare.send(sessionId: session.id, question: 'x', language: 'zh'),
         throwsA(isA<LlmApiException>()));
   });
+
+  test('invalidated guard does not persist the assistant turn', () async {
+    final gate = Completer<void>();
+    final repo = _HoldStreamRepo(gate);
+    final guard = AiActivityGuard();
+    final held = RagChatEngine(
+      accountId: 'acc-1',
+      db: db,
+      repository: repo,
+      retrieval: RetrievalService(db: db, repository: repo),
+      guard: guard,
+    );
+    final session = await db.chatDao.createSession('acc-1');
+    final turn = await held.send(
+        sessionId: session.id, question: '方案怎么想的', language: 'en');
+    guard.invalidate();
+    gate.complete();
+    await turn.deltas.drain();
+
+    final messages = await db.chatDao.lastMessages('acc-1', session.id, 10);
+    expect(messages.map((m) => m.role), ['user']);
+  });
 }
 
 class _PartialThenThrowRepo extends LlmRepository {
@@ -284,6 +307,19 @@ class _ChatOnlyRepo extends LlmRepository {
   Stream<String> chatStream(LlmSettings settings,
       {required List<LlmChatMessage> messages, int? maxTokens}) async* {
     yield '你当时倾向于方案 B [1]。';
+  }
+}
+
+class _HoldStreamRepo extends _FakeRepo {
+  _HoldStreamRepo(this.gate);
+
+  final Completer<void> gate;
+
+  @override
+  Stream<String> chatStream(LlmSettings settings,
+      {required List<LlmChatMessage> messages, int? maxTokens}) async* {
+    await gate.future;
+    yield* super.chatStream(settings, messages: messages, maxTokens: maxTokens);
   }
 }
 

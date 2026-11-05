@@ -188,7 +188,7 @@
   "llmTestFailed": "Endpoint test failed",
   "llmInvalidBaseUrl": "Invalid endpoint URL, must start with http(s)://",
   "llmClear": "Clear settings",
-  "llmClearConfirm": "Clear AI assistant settings?",
+  "llmClearConfirm": "Clear AI assistant settings? Embeddings, AI chats, save-time suggestions, and daily summaries stored on this device will also be deleted.",
   "digestTitle": "AI summary",
   "digestGenerate": "Generate summary",
   "digestRegenerate": "Regenerate",

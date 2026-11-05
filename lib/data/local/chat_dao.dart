@@ -148,4 +148,11 @@ class ChatDao extends DatabaseAccessor<AppDatabase> with _$ChatDaoMixin {
                   s.accountId.equals(accountId) & s.id.equals(sessionId)))
             .go();
       });
+
+  /// Removes every account's sessions and messages. LLM settings are global,
+  /// so a privacy wipe cannot leave another account's chats behind.
+  Future<void> deleteAll() => transaction(() async {
+        await delete(chatMessages).go();
+        await delete(chatSessions).go();
+      });
 }

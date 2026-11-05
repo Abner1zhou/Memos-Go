@@ -474,7 +474,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get llmClear => 'Clear settings';
 
   @override
-  String get llmClearConfirm => 'Clear AI assistant settings?';
+  String get llmClearConfirm =>
+      'Clear AI assistant settings? Embeddings, AI chats, save-time suggestions, and daily summaries stored on this device will also be deleted.';
 
   @override
   String get digestTitle => 'AI summary';

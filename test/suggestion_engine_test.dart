@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:typed_data';
+import 'dart:ui' show Locale;
 
 import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:memos_go/core/utils/stable_hash.dart';
+import 'package:memos_go/data/llm/ai_activity_guard.dart';
 import 'package:memos_go/data/llm/retrieval.dart';
 import 'package:memos_go/data/llm/suggestion_engine.dart';
 import 'package:memos_go/data/local/app_database.dart';
@@ -136,12 +139,99 @@ void main() {
 
     final messages = repo.bodies.single;
     expect(messages.first['role'], 'system');
-    expect((messages.first['content'] as String), contains('JSON'));
+    final system = messages.first['content'] as String;
+    expect(system, contains('JSON'));
+    expect(system, contains('你为刚保存的笔记'));
     final user = messages.last['content'] as String;
+    expect(user, contains('已有标签：'));
+    expect(user, contains('候选相关记忆：'));
+    expect(user, contains('新笔记：'));
     expect(user, contains('运维')); // 已有标签清单
     expect(user, contains('[1]')); // 编号候选
     expect(user, contains('k8s 滚动更新排查')); // 候选摘录
     expect(user, contains('新笔记内容')); // memo 内容
+    await e.dispose();
+  });
+
+  test('run with no language argument follows the callback', () async {
+    var code = 'en';
+    final repo = _FakeRepo(reply: '{"tags": [], "related": []}');
+    final e = SuggestionEngine(
+        accountId: 'acc-1',
+        db: db,
+        repository: repo,
+        retrieval: RetrievalService(db: db, repository: repo),
+        language: () => code);
+    e.start();
+    await Future<void>.delayed(Duration.zero);
+    await db.memoDao.upsertLocalMemo('acc-1', _memo('new1', 'hello note'));
+    await Future<void>.delayed(Duration.zero);
+    // The debounce timer calls run() the same way: no language argument.
+    await e.run();
+
+    final first = repo.bodies.single;
+    expect(first.first['content'] as String, contains('You suggest metadata'));
+    final user = first.last['content'] as String;
+    expect(user, contains('Existing tags:'));
+    expect(user, contains('Candidate related memos:'));
+    expect(user, contains('New note:'));
+    expect(user, contains('hello note'));
+
+    repo.bodies.clear();
+    code = 'zh';
+    await db.memoDao.upsertLocalMemo('acc-1', _memo('new1', '改成中文笔记'));
+    await Future<void>.delayed(Duration.zero);
+    await e.run();
+    final second = repo.bodies.single.last['content'] as String;
+    expect(second, contains('已有标签：'));
+    expect(second, contains('新笔记：'));
+    expect(second, contains('改成中文笔记'));
+    await e.dispose();
+  });
+
+  test('explicit language overrides the callback', () async {
+    final repo = _FakeRepo(reply: '{"tags": [], "related": []}');
+    final e = SuggestionEngine(
+        accountId: 'acc-1',
+        db: db,
+        repository: repo,
+        retrieval: RetrievalService(db: db, repository: repo),
+        language: () => 'zh');
+    e.start();
+    await Future<void>.delayed(Duration.zero);
+    await db.memoDao.upsertLocalMemo('acc-1', _memo('new1', 'hello note'));
+    await Future<void>.delayed(Duration.zero);
+    await e.run(language: 'en-US');
+
+    expect(repo.bodies.single.first['content'] as String,
+        contains('You suggest metadata'));
+    await e.dispose();
+  });
+
+  test('an invalidated guard drops an in-flight suggestion', () async {
+    final gate = Completer<String>();
+    final repo = _GatedRepo(gate);
+    final guard = AiActivityGuard();
+    final e = SuggestionEngine(
+        accountId: 'acc-1',
+        db: db,
+        repository: repo,
+        retrieval: RetrievalService(db: db, repository: repo),
+        language: () => 'en',
+        guard: guard);
+    e.start();
+    await Future<void>.delayed(Duration.zero);
+    await db.memoDao.upsertLocalMemo('acc-1', _memo('new1', 'hello note'));
+    await Future<void>.delayed(Duration.zero);
+    final pending = e.run();
+    await Future<void>.delayed(Duration.zero);
+    guard.invalidate();
+    gate.complete('{"tags": ["ops"], "related": [1]}');
+    await pending;
+
+    expect(await db.suggestionDao.watchSuggestion('acc-1', 'new1').first,
+        isNull);
+    await e.dispose();
   });
 
   test('hallucinated or self references are dropped', () async {
@@ -229,6 +319,51 @@ void main() {
             candidateUids: candidates, selfName: 'memos/x'),
         isNull);
   });
+
+  test('resolveSuggestionLanguage follows the setting, then the platform', () {
+    expect(
+        resolveSuggestionLanguage(
+            localeCode: 'en', platformLocales: const [Locale('zh')]),
+        'en');
+    expect(
+        resolveSuggestionLanguage(
+            localeCode: 'zh', platformLocales: const [Locale('en', 'US')]),
+        'zh');
+    expect(
+        resolveSuggestionLanguage(
+            localeCode: '', platformLocales: const [Locale('zh', 'CN')]),
+        'zh');
+    expect(
+        resolveSuggestionLanguage(
+            localeCode: '', platformLocales: const [Locale('en', 'US')]),
+        'en');
+    expect(
+        resolveSuggestionLanguage(
+            localeCode: '',
+            platformLocales: const [Locale('fr'), Locale('zh')]),
+        'zh');
+    expect(
+        resolveSuggestionLanguage(
+            localeCode: '', platformLocales: const [Locale('fr')]),
+        'en');
+    expect(resolveSuggestionLanguage(localeCode: ''), 'en');
+    expect(normalizeSuggestionLanguage('en-US'), 'en');
+    expect(normalizeSuggestionLanguage('EN'), 'en');
+    expect(normalizeSuggestionLanguage('zh_Hans'), 'zh');
+  });
+}
+
+class _GatedRepo extends _FakeRepo {
+  _GatedRepo(this.gate) : super(reply: '{"tags": [], "related": []}');
+
+  final Completer<String> gate;
+
+  @override
+  Future<String> chat(LlmSettings settings,
+      {required List<LlmChatMessage> messages, int? maxTokens}) async {
+    bodies.add([for (final m in messages) m.toJson()]);
+    return gate.future;
+  }
 }
 
 class _OffRepo extends LlmRepository {
