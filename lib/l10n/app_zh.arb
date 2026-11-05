@@ -20,7 +20,7 @@
   "logining": "登录中…",
   "serverUnreachable": "无法连接服务器，请检查地址和网络",
   "emptyMemoTitle": "还没有笔记",
-  "emptyMemoSubtitle": "点击右下角按钮写下第一条笔记",
+  "emptyMemoSubtitle": "点击底部中间的撰写按钮写下第一条笔记",
   "loadFailed": "加载失败",
   "retry": "重试",
   "newMemo": "新建笔记",
@@ -245,5 +245,8 @@
   "syncNow": "立即同步",
   "pendingBadgeTooltip": "待同步",
   "savedOffline": "已保存，联网后自动同步",
-  "voiceMemoUntitled": "语音速记"
+  "voiceMemoUntitled": "语音速记",
+  "navCompose": "撰写",
+  "navReview": "回顾",
+  "navMe": "我的"
 }

@@ -71,8 +71,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emptyMemoTitle => 'No memos yet';
 
   @override
-  String get emptyMemoSubtitle =>
-      'Tap the button below to write your first memo';
+  String get emptyMemoSubtitle => 'Tap Compose below to write your first memo';
 
   @override
   String get loadFailed => 'Failed to load';
@@ -638,4 +637,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceMemoUntitled => 'Voice memo';
+
+  @override
+  String get navCompose => 'Compose';
+
+  @override
+  String get navReview => 'Review';
+
+  @override
+  String get navMe => 'Me';
 }

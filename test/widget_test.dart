@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:memos_go/app.dart';
+import 'package:memos_go/features/shell/app_shell.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
@@ -10,5 +11,7 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: MemosGoApp()));
     await tester.pumpAndSettle(const Duration(seconds: 2));
     expect(find.byType(Scaffold), findsWidgets);
+    expect(find.text('Sign in to Memos'), findsOneWidget);
+    expect(find.byKey(primaryNavBarKey), findsNothing);
   });
 }

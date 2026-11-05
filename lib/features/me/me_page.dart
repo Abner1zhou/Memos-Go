@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../l10n/generated/app_localizations.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -8,9 +10,13 @@ import '../../providers/asr_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/llm_providers.dart';
 import '../../providers/settings_providers.dart';
+import 'memo_library.dart';
 
-class SettingsPage extends ConsumerWidget {
-  const SettingsPage({super.key});
+/// Me tab: account, library (stats, heatmap, tags), trash, and settings
+/// including multi-server and LLM. Route stays `/settings` so existing
+/// deep links keep working.
+class MePage extends ConsumerWidget {
+  const MePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -23,16 +29,20 @@ class SettingsPage extends ConsumerWidget {
     final account = auth.activeAccount;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.settings)),
+      appBar: AppBar(title: Text(l10n.navMe)),
       body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        // Extra space so the last row can sit fully above the shell bar.
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
         children: [
           if (account != null) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-              child: Text(l10n.account,
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(color: theme.colorScheme.primary)),
+              child: Text(
+                l10n.account,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
+              ),
             ),
             ListTile(
               leading: CircleAvatar(
@@ -47,8 +57,9 @@ class SettingsPage extends ConsumerWidget {
               title: Text(account.user.shownName),
               subtitle: Text(
                 '@${account.user.username}\n${account.baseUrl}',
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
               isThreeLine: true,
             ),
@@ -57,18 +68,25 @@ class SettingsPage extends ConsumerWidget {
           if (auth.accounts.length > 1) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-              child: Text(l10n.servers,
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(color: theme.colorScheme.primary)),
+              child: Text(
+                l10n.servers,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
+              ),
             ),
             for (final other in auth.accounts)
               if (other.id != account?.id)
                 ListTile(
                   leading: const Icon(Icons.dns_outlined),
-                  title: Text('${other.user.shownName} @ ${_hostOf(other.baseUrl)}'),
-                  subtitle: Text(l10n.currentServer == other.id
-                      ? l10n.currentServer
-                      : other.baseUrl),
+                  title: Text(
+                    '${other.user.shownName} @ ${_hostOf(other.baseUrl)}',
+                  ),
+                  subtitle: Text(
+                    l10n.currentServer == other.id
+                        ? l10n.currentServer
+                        : other.baseUrl,
+                  ),
                   trailing: TextButton(
                     onPressed: () =>
                         ref.read(authProvider.notifier).switchAccount(other.id),
@@ -77,11 +95,22 @@ class SettingsPage extends ConsumerWidget {
                 ),
             const Divider(),
           ],
+          const MemoLibrarySection(),
+          ListTile(
+            leading: const Icon(Icons.delete_outline),
+            title: Text(l10n.trash),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/trash'),
+          ),
+          const Divider(),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-            child: Text(l10n.appearance,
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(color: theme.colorScheme.primary)),
+            child: Text(
+              l10n.appearance,
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: theme.colorScheme.primary,
+              ),
+            ),
           ),
           ListTile(
             leading: const Icon(Icons.brightness_6_outlined),
@@ -92,14 +121,20 @@ class SettingsPage extends ConsumerWidget {
                   ref.read(settingsProvider.notifier).setThemeMode(s.first),
               segments: [
                 ButtonSegment(
-                    value: ThemeMode.system,
-                    icon: const Icon(Icons.settings_brightness_outlined, size: 18)),
+                  value: ThemeMode.system,
+                  icon: const Icon(
+                    Icons.settings_brightness_outlined,
+                    size: 18,
+                  ),
+                ),
                 ButtonSegment(
-                    value: ThemeMode.light,
-                    icon: const Icon(Icons.light_mode_outlined, size: 18)),
+                  value: ThemeMode.light,
+                  icon: const Icon(Icons.light_mode_outlined, size: 18),
+                ),
                 ButtonSegment(
-                    value: ThemeMode.dark,
-                    icon: const Icon(Icons.dark_mode_outlined, size: 18)),
+                  value: ThemeMode.dark,
+                  icon: const Icon(Icons.dark_mode_outlined, size: 18),
+                ),
               ],
             ),
           ),
@@ -112,9 +147,8 @@ class SettingsPage extends ConsumerWidget {
               padding: const EdgeInsets.only(top: 8),
               child: SegmentedButton<String>(
                 selected: {settings.localeCode},
-                onSelectionChanged: (s) => ref
-                    .read(settingsProvider.notifier)
-                    .setLocaleCode(s.first),
+                onSelectionChanged: (s) =>
+                    ref.read(settingsProvider.notifier).setLocaleCode(s.first),
                 segments: [
                   ButtonSegment(value: '', label: Text(l10n.langSystem)),
                   const ButtonSegment(value: 'zh', label: Text('中文')),
@@ -128,15 +162,17 @@ class SettingsPage extends ConsumerWidget {
             leading: const Icon(Icons.mic_none_rounded),
             title: Text(l10n.settingsVoiceInput),
             subtitle: Text(
-                asr.isConfigured ? asr.model : l10n.asrNotConfigured),
+              asr.isConfigured ? asr.model : l10n.asrNotConfigured,
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/asr'),
           ),
           ListTile(
             leading: const Icon(Icons.auto_awesome_outlined),
             title: Text(l10n.llmSettingsTitle),
-            subtitle:
-                Text(llm.isConfigured ? llm.chatModel : l10n.asrNotConfigured),
+            subtitle: Text(
+              llm.isConfigured ? llm.chatModel : l10n.asrNotConfigured,
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/llm'),
           ),
@@ -148,8 +184,10 @@ class SettingsPage extends ConsumerWidget {
           ),
           ListTile(
             leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
-            title: Text(l10n.logout,
-                style: TextStyle(color: theme.colorScheme.error)),
+            title: Text(
+              l10n.logout,
+              style: TextStyle(color: theme.colorScheme.error),
+            ),
             onTap: () => _confirmSignOut(context, ref),
           ),
           const Divider(),
@@ -158,9 +196,8 @@ class SettingsPage extends ConsumerWidget {
             title: Text(l10n.about),
             subtitle: FutureBuilder<PackageInfo>(
               future: PackageInfo.fromPlatform(),
-              builder: (context, snap) => Text(
-                '${l10n.version} ${snap.data?.version ?? '-'}',
-              ),
+              builder: (context, snap) =>
+                  Text('${l10n.version} ${snap.data?.version ?? '-'}'),
             ),
           ),
         ],
@@ -181,11 +218,13 @@ class SettingsPage extends ConsumerWidget {
         content: Text(l10n.removeServerConfirm),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(l10n.cancel)),
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l10n.confirm)),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.confirm),
+          ),
         ],
       ),
     );

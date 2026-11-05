@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../data/models/models.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -52,132 +53,160 @@ class _DailyReviewPageState extends ConsumerState<DailyReviewPage> {
           ),
         ],
       ),
-      body: insights.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('${l10n.loadFailed}: $e',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall),
-              TextButton(
-                onPressed: () => ref.invalidate(memoInsightsProvider),
-                child: Text(l10n.retry),
-              ),
-            ],
-          ),
-        ),
-        data: (ins) {
-          final today = DateTime.now();
-          final pool = ins.memos
-              .where((m) =>
-                  m.state == MemoState.normal && m.content.trim().isNotEmpty)
-              .toList();
-
-          if (pool.isEmpty || repo == null) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.auto_awesome_outlined,
-                      size: 52, color: theme.colorScheme.onSurfaceVariant),
-                  const SizedBox(height: 12),
-                  Text(
-                    l10n.noReviewYet,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final onThisDay = <int, List<Memo>>{};
-          for (final memo in pool) {
-            final created = memo.createTime?.toLocal();
-            if (created == null) continue;
-            if (created.month == today.month &&
-                created.day == today.day &&
-                created.year < today.year) {
-              onThisDay.putIfAbsent(created.year, () => []).add(memo);
-            }
-          }
-          final todayMemos = pool
-              .where((m) {
-                final created = m.createTime?.toLocal();
-                return created != null &&
-                    created.year == today.year &&
-                    created.month == today.month &&
-                    created.day == today.day;
-              })
-              .toList();
-          final sortedYears = onThisDay.keys.toList()
-            ..sort((a, b) => b.compareTo(a));
-          // Recall samples exclude on-this-day memos so nothing shows twice.
-          final seen =
-              onThisDay.values.expand((list) => list).map((m) => m.name).toSet();
-          final recalled =
-              _sample(pool.where((m) => !seen.contains(m.name)).toList());
-
-          final showDigest = todayMemos.isNotEmpty || onThisDay.isNotEmpty;
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
-            itemCount:
-                (showDigest ? 1 : 0) + sortedYears.length + recalled.length,
-            itemBuilder: (context, index) {
-              if (showDigest && index == 0) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: ReviewDigestCard(
-                      today: todayMemos, onThisDay: onThisDay),
-                );
-              }
-              final i = index - (showDigest ? 1 : 0);
-              if (i < sortedYears.length) {
-                final year = sortedYears[i];
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 10, 4, 8),
-                      child: Text(
-                        l10n.yearsAgoToday(today.year - year),
-                        style: theme.textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    for (final memo in onThisDay[year]!)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: MemoCard(memo: memo, repo: repo),
-                      ),
-                  ],
-                );
-              }
-              final memo = recalled[i - sortedYears.length];
-              return Padding(
-                key: ValueKey('recall-$_roll-${memo.name}'),
-                padding: const EdgeInsets.only(bottom: 8),
+      body: Column(
+        children: [
+          const _ReviewShortcuts(),
+          Expanded(
+            child: insights.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 10, 4, 6),
-                      child: Text(
-                        _agoLabel(l10n, memo.createTime?.toLocal(), today),
-                        style: theme.textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
+                    Text(
+                      '${l10n.loadFailed}: $e',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall,
                     ),
-                    MemoCard(memo: memo, repo: repo),
+                    TextButton(
+                      onPressed: () => ref.invalidate(memoInsightsProvider),
+                      child: Text(l10n.retry),
+                    ),
                   ],
                 ),
-              );
-            },
-          );
-        },
+              ),
+              data: (ins) {
+                final today = DateTime.now();
+                final pool = ins.memos
+                    .where(
+                      (m) =>
+                          m.state == MemoState.normal &&
+                          m.content.trim().isNotEmpty,
+                    )
+                    .toList();
+
+                if (pool.isEmpty || repo == null) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.auto_awesome_outlined,
+                          size: 52,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          l10n.noReviewYet,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final onThisDay = <int, List<Memo>>{};
+                for (final memo in pool) {
+                  final created = memo.createTime?.toLocal();
+                  if (created == null) continue;
+                  if (created.month == today.month &&
+                      created.day == today.day &&
+                      created.year < today.year) {
+                    onThisDay.putIfAbsent(created.year, () => []).add(memo);
+                  }
+                }
+                final todayMemos = pool.where((m) {
+                  final created = m.createTime?.toLocal();
+                  return created != null &&
+                      created.year == today.year &&
+                      created.month == today.month &&
+                      created.day == today.day;
+                }).toList();
+                final sortedYears = onThisDay.keys.toList()
+                  ..sort((a, b) => b.compareTo(a));
+                // Recall samples exclude on-this-day memos so nothing shows twice.
+                final seen = onThisDay.values
+                    .expand((list) => list)
+                    .map((m) => m.name)
+                    .toSet();
+                final recalled = _sample(
+                  pool.where((m) => !seen.contains(m.name)).toList(),
+                );
+
+                final showDigest =
+                    todayMemos.isNotEmpty || onThisDay.isNotEmpty;
+                return ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
+                  itemCount:
+                      (showDigest ? 1 : 0) +
+                      sortedYears.length +
+                      recalled.length,
+                  itemBuilder: (context, index) {
+                    if (showDigest && index == 0) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: ReviewDigestCard(
+                          today: todayMemos,
+                          onThisDay: onThisDay,
+                        ),
+                      );
+                    }
+                    final i = index - (showDigest ? 1 : 0);
+                    if (i < sortedYears.length) {
+                      final year = sortedYears[i];
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 10, 4, 8),
+                            child: Text(
+                              l10n.yearsAgoToday(today.year - year),
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          for (final memo in onThisDay[year]!)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: MemoCard(memo: memo, repo: repo),
+                            ),
+                        ],
+                      );
+                    }
+                    final memo = recalled[i - sortedYears.length];
+                    return Padding(
+                      key: ValueKey('recall-$_roll-${memo.name}'),
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 10, 4, 6),
+                            child: Text(
+                              _agoLabel(
+                                l10n,
+                                memo.createTime?.toLocal(),
+                                today,
+                              ),
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          MemoCard(memo: memo, repo: repo),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -192,5 +221,85 @@ class _DailyReviewPageState extends ConsumerState<DailyReviewPage> {
     if (months < 1) return l10n.wroteDaysAgo(days);
     if (months < 12) return l10n.wroteMonthsAgo(months);
     return l10n.wroteYearsAgo(months ~/ 12);
+  }
+}
+
+/// Pinned entries for the other review-tab destinations. Daily review itself
+/// is the page; chat and random walk open full screen above the shell.
+class _ReviewShortcuts extends StatelessWidget {
+  const _ReviewShortcuts();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: _ShortcutCard(
+              icon: Icons.forum_outlined,
+              label: l10n.chatEntry,
+              onTap: () => context.push('/chat'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _ShortcutCard(
+              icon: Icons.shuffle_rounded,
+              label: l10n.randomWalk,
+              onTap: () => context.push('/random'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShortcutCard extends StatelessWidget {
+  const _ShortcutCard({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

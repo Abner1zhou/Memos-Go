@@ -221,7 +221,7 @@ abstract class AppLocalizations {
   /// No description provided for @emptyMemoSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'点击右下角按钮写下第一条笔记'**
+  /// **'点击底部中间的撰写按钮写下第一条笔记'**
   String get emptyMemoSubtitle;
 
   /// No description provided for @loadFailed.
@@ -1267,6 +1267,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'语音速记'**
   String get voiceMemoUntitled;
+
+  /// No description provided for @navCompose.
+  ///
+  /// In zh, this message translates to:
+  /// **'撰写'**
+  String get navCompose;
+
+  /// No description provided for @navReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'回顾'**
+  String get navReview;
+
+  /// No description provided for @navMe.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的'**
+  String get navMe;
 }
 
 class _AppLocalizationsDelegate

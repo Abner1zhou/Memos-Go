@@ -70,7 +70,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get emptyMemoTitle => '还没有笔记';
 
   @override
-  String get emptyMemoSubtitle => '点击右下角按钮写下第一条笔记';
+  String get emptyMemoSubtitle => '点击底部中间的撰写按钮写下第一条笔记';
 
   @override
   String get loadFailed => '加载失败';
@@ -621,4 +621,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get voiceMemoUntitled => '语音速记';
+
+  @override
+  String get navCompose => '撰写';
+
+  @override
+  String get navReview => '回顾';
+
+  @override
+  String get navMe => '我的';
 }

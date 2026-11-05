@@ -276,7 +276,7 @@ String _messageOf(Object e) {
   return e.toString();
 }
 
-/// Aggregated account insights for the drawer: recent memos, tag counts and a
+/// Aggregated account insights for the Me tab: recent memos, tag counts and a
 /// per-day activity map backing the stats row and heatmap.
 class MemoInsights {
   const MemoInsights({
@@ -310,7 +310,7 @@ class MemoInsights {
       );
 }
 
-/// Aggregated account insights for the drawer: recent memos, tag counts and a
+/// Aggregated account insights for the Me tab: recent memos, tag counts and a
 /// per-day activity map backing the stats row and heatmap. Computed from the
 /// local mirror so it works offline and recomputes reactively as the sync
 /// engine writes; plain server repositories (tests) keep the legacy fetch.
