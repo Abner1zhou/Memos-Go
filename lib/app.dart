@@ -161,7 +161,11 @@ List<RouteBase> buildAppRoutes() => [
 ];
 
 class MemosGoApp extends ConsumerWidget {
-  const MemosGoApp({super.key});
+  const MemosGoApp({super.key, this.fontFamily});
+
+  /// Overrides the theme font. Widget tests pass this when the tester is
+  /// running with the Ahem test font and a real face has been loaded.
+  final String? fontFamily;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -176,8 +180,8 @@ class MemosGoApp extends ConsumerWidget {
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      theme: _withFont(AppTheme.light()),
+      darkTheme: _withFont(AppTheme.dark()),
       themeMode: settings.themeMode,
       locale: settings.locale,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -188,6 +192,21 @@ class MemosGoApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       routerConfig: router,
+    );
+  }
+
+  ThemeData _withFont(ThemeData base) {
+    final family = fontFamily;
+    if (family == null) return base;
+    final title = base.appBarTheme.titleTextStyle;
+    return base.copyWith(
+      textTheme: base.textTheme.apply(fontFamily: family),
+      primaryTextTheme: base.primaryTextTheme.apply(fontFamily: family),
+      appBarTheme: base.appBarTheme.copyWith(
+        titleTextStyle: (title ?? const TextStyle()).copyWith(
+          fontFamily: family,
+        ),
+      ),
     );
   }
 }

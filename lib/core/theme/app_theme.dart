@@ -31,17 +31,20 @@ class AppTheme {
       primary: dark ? const Color(0xFF3ACB82) : brandGreen,
       onPrimary: Colors.white,
       primaryContainer: dark ? const Color(0xFF1D3527) : brandGreenContainer,
-      onPrimaryContainer:
-          dark ? const Color(0xFF7ED9A6) : onBrandGreenContainer,
+      onPrimaryContainer: dark
+          ? const Color(0xFF7ED9A6)
+          : onBrandGreenContainer,
       secondary: tagBlue,
       onSecondary: Colors.white,
       surface: dark ? const Color(0xFF232427) : Colors.white,
       onSurface: dark ? const Color(0xFFE8E8EA) : const Color(0xFF26292E),
-      surfaceContainerHighest:
-          dark ? const Color(0xFF2E2F33) : const Color(0xFFEFEFF2),
-      onSurfaceVariant: dark ? const Color(0xFF9AA0A8) : const Color(0xFF8A8F99),
-      outlineVariant:
-          dark ? const Color(0xFF35363A) : const Color(0xFFE4E6EA),
+      surfaceContainerHighest: dark
+          ? const Color(0xFF2E2F33)
+          : const Color(0xFFEFEFF2),
+      onSurfaceVariant: dark
+          ? const Color(0xFF9AA0A8)
+          : const Color(0xFF8A8F99),
+      outlineVariant: dark ? const Color(0xFF35363A) : const Color(0xFFE4E6EA),
       error: dark ? const Color(0xFFFF6B6E) : const Color(0xFFE5484D),
       onError: Colors.white,
     );
@@ -51,6 +54,14 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: canvas,
+      // Named fallbacks for Chinese when the primary font has no glyph.
+      // Families that are not installed are skipped.
+      fontFamilyFallback: const [
+        'Noto Sans SC',
+        'Noto Sans CJK SC',
+        'PingFang SC',
+        'Source Han Sans SC',
+      ],
       appBarTheme: AppBarTheme(
         centerTitle: false,
         elevation: 0,
@@ -95,7 +106,9 @@ class AppTheme {
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
-      snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+      snackBarTheme: const SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+      ),
       listTileTheme: ListTileThemeData(iconColor: scheme.onSurfaceVariant),
     );
   }
