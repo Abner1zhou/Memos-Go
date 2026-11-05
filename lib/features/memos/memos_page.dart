@@ -253,7 +253,9 @@ class MemoCard extends ConsumerWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => context.push('/memos/edit/${memo.uid}'),
+        // Read-first: the whole card is a reading target; editing stays one
+        // tap away in the overflow menu instead of hijacking the tap.
+        onTap: () => context.push('/memos/detail/${memo.uid}'),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 12, 10, 10),
           child: Column(
@@ -274,8 +276,9 @@ class MemoCard extends ConsumerWidget {
                     child: Text(
                       formatStamp(memo.createTime),
                       style: theme.textTheme.bodySmall?.copyWith(
-                        fontSize: 12,
-                        color: theme.colorScheme.onSurfaceVariant,
+                        fontSize: 11,
+                        color: theme.colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.8),
                       ),
                     ),
                   ),
@@ -304,11 +307,22 @@ class MemoCard extends ConsumerWidget {
                     constraints: const BoxConstraints(minWidth: 160),
                     icon: Icon(
                       Icons.more_horiz,
-                      size: 22,
-                      color: theme.colorScheme.onSurfaceVariant,
+                      size: 20,
+                      color: theme.colorScheme.onSurfaceVariant
+                          .withValues(alpha: 0.7),
                     ),
                     onSelected: (action) => _onAction(context, ref, action),
                     itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.edit_outlined),
+                            const SizedBox(width: 12),
+                            Text(l10n.edit),
+                          ],
+                        ),
+                      ),
                       PopupMenuItem(
                         value: 'pin',
                         child: Row(
@@ -354,9 +368,10 @@ class MemoCard extends ConsumerWidget {
                 ],
               ),
               if (memo.content.trim().isNotEmpty) ...[
-                const SizedBox(height: 2),
+                const SizedBox(height: 6),
                 _ExpandableContent(
                   content: memo.content,
+                  baseStyle: theme.textTheme.bodyLarge,
                   onTagTap: (tag) => pushTagMemos(context, tag),
                 ),
               ],
@@ -388,6 +403,8 @@ class MemoCard extends ConsumerWidget {
   ) async {
     final l10n = AppLocalizations.of(context)!;
     switch (action) {
+      case 'edit':
+        if (context.mounted) context.push('/memos/edit/${memo.uid}');
       case 'pin':
         try {
           final updated = await ref
@@ -439,9 +456,13 @@ class MemoCard extends ConsumerWidget {
 /// Memo body that collapses long content behind an expand/collapse link,
 /// mirroring flomo's card behavior.
 class _ExpandableContent extends StatefulWidget {
-  const _ExpandableContent({required this.content, this.onTagTap});
+  const _ExpandableContent({required this.content, this.baseStyle, this.onTagTap});
 
   final String content;
+
+  /// Body text style handed to [MemoMarkdown]; null keeps the default.
+  final TextStyle? baseStyle;
+
   final ValueChanged<String>? onTagTap;
 
   @override
@@ -481,6 +502,7 @@ class _ExpandableContentState extends State<_ExpandableContent> {
       children: [
         MemoMarkdown(
           content: collapsed ? _collapsedText : widget.content,
+          baseStyle: widget.baseStyle,
           onTagTap: widget.onTagTap,
         ),
         if (_isLong)
