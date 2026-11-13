@@ -164,7 +164,7 @@ void main() {
     expect(find.text('Search memo content…'), findsWidgets);
   });
 
-  testWidgets('tapping a card opens the editor instead of read-only detail', (
+  testWidgets('tapping a card opens read-only detail instead of the editor', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
@@ -174,8 +174,49 @@ void main() {
     );
     await _pumpApp(tester, db);
 
-    // Tap the card body (not the #work link): the editor opens in edit mode.
-    await tester.tap(find.textContaining('Morning note').first);
+    // The card body reads at article size (16sp) — the visual hero. The
+    // paragraph root inherits the ambient style; the size lives on leaf spans.
+    final rich = tester.widget<RichText>(
+      find.textContaining('Morning note #work', findRichText: true).first,
+    );
+    final leafSizes = <double?>[];
+    (rich.text as TextSpan).visitChildren((span) {
+      if (span is TextSpan && span.children == null) {
+        leafSizes.add(span.style?.fontSize);
+      }
+      return true;
+    });
+    expect(leafSizes, isNotEmpty);
+    expect(leafSizes, everyElement(16));
+
+    // Tap a card's timestamp strip: inside the card tap target, clear of any
+    // #tag chip. The read-only detail opens; the editor does not.
+    await tester.tap(
+      find.textContaining(RegExp(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$')).first,
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Edit memo'), findsNothing);
+    expect(find.byType(TextField), findsNothing);
+    // The detail page's own app-bar overflow sits above the feed.
+    expect(find.byIcon(Icons.more_vert), findsOneWidget);
+  });
+
+  testWidgets('edit stays reachable from the card overflow menu', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final db = await buildSeededDb(
+      normal: _defaultMemos(),
+      deleted: _defaultDeleted(),
+    );
+    await _pumpApp(tester, db);
+
+    await tester.tap(find.byIcon(Icons.more_horiz).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit'));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 

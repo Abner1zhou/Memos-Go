@@ -17,12 +17,18 @@ class MemoMarkdown extends StatelessWidget {
     this.onTagTap,
     this.onCiteTap,
     this.selectable = false,
+    this.baseStyle,
   });
 
   final String content;
   final ValueChanged<String>? onTagTap;
   final ValueChanged<int>? onCiteTap;
   final bool selectable;
+
+  /// Body text style for paragraphs and list items. Callers that present the
+  /// memo as a reading surface (feed cards) pass a larger style so the
+  /// content reads as the hero; defaults to `bodyMedium`.
+  final TextStyle? baseStyle;
 
   static final RegExp _tagInCode = RegExp(r'```[\s\S]*?```|`[^`\n]*`');
   static final RegExp _tagPattern = RegExp(r'(^|[\s(])#([^\s#),.；。，、]+)');
@@ -96,7 +102,7 @@ class MemoMarkdown extends StatelessWidget {
       shrinkWrap: true,
       extensionSet: md.ExtensionSet.gitHubWeb,
       styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
-        p: theme.textTheme.bodyMedium?.copyWith(height: 1.55),
+        p: baseStyle ?? theme.textTheme.bodyMedium?.copyWith(height: 1.55),
         h1: theme.textTheme.titleLarge,
         h2: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
         h3: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
@@ -115,8 +121,8 @@ class MemoMarkdown extends StatelessWidget {
           fontFamily: 'monospace',
           color: theme.colorScheme.onSurface,
         ),
-        listBullet: theme.textTheme.bodyMedium,
-        checkbox: theme.textTheme.bodyMedium,
+        listBullet: baseStyle ?? theme.textTheme.bodyMedium,
+        checkbox: baseStyle ?? theme.textTheme.bodyMedium,
         a: TextStyle(color: AppTheme.tagBlue, fontWeight: FontWeight.w500),
       ),
       onTapLink: (text, href, title) {
