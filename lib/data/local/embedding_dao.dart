@@ -142,6 +142,10 @@ class EmbeddingDao extends DatabaseAccessor<AppDatabase>
             ..where((e) => e.accountId.equals(accountId)))
           .go();
 
+  /// Drops every account's vectors. LLM settings are global, so a privacy
+  /// wipe cannot leave another account's embeddings behind.
+  Future<void> deleteAll() => delete(memoEmbeddings).go();
+
   /// Drops embedding rows for [uids] (any model). Blank memos are skipped
   /// by the engine but still match [corpus], so a stale vector would
   /// otherwise survive [deleteOrphans].

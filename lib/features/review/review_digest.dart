@@ -152,4 +152,17 @@ class ReviewDigestCache {
       await prefs.remove(keys.removeAt(0));
     }
   }
+
+  /// Removes every account's cached digests. LLM settings are global, so a
+  /// privacy wipe cannot leave another account's summaries behind.
+  Future<void> clearAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = [
+      for (final key in prefs.getKeys())
+        if (key.startsWith(_prefix)) key,
+    ];
+    for (final key in keys) {
+      await prefs.remove(key);
+    }
+  }
 }

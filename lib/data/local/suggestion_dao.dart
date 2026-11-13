@@ -104,4 +104,8 @@ class SuggestionDao extends DatabaseAccessor<AppDatabase>
             ..where((s) =>
                 s.accountId.equals(accountId) & s.memoUid.equals(memoUid)))
           .go();
+
+  /// Removes every account's suggestion cache. LLM settings are global, so
+  /// a privacy wipe cannot leave another account's rows behind.
+  Future<void> deleteAll() => delete(memoSuggestions).go();
 }

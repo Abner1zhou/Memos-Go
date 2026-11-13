@@ -258,6 +258,27 @@ void main() {
     expect(e.state.value.status, VectorStatus.paused);
   });
 
+  test('abandonInFlight drops an in-flight pass without pausing', () async {
+    await db.memoDao.upsertLocalMemo('acc-1', memo('a', 'x'));
+    final gate = Completer<void>();
+    final e = VectorizationEngine(
+        accountId: 'acc-1',
+        db: db,
+        repository: GatedVectorRepository(configured, gate: gate));
+    final done = e.run();
+    await Future<void>.delayed(Duration.zero);
+    e.abandonInFlight();
+    gate.complete();
+    await done;
+
+    expect(await db.embeddingDao.embeddedHashes('acc-1', 'e-m'), isEmpty);
+    expect(e.state.value.status, VectorStatus.idle);
+
+    await e.run();
+    expect((await db.embeddingDao.embeddedHashes('acc-1', 'e-m')).containsKey('a'),
+        isTrue);
+  });
+
   test('load() failure lands in state instead of throwing', () async {
     await db.memoDao.upsertLocalMemo('acc-1', memo('a', 'x'));
     final e = VectorizationEngine(
