@@ -4,6 +4,9 @@ import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
 
 /// GitHub-style contribution heatmap showing memos created per day.
+///
+/// Fills the parent's width: each week column is an [Expanded] so the grid
+/// stretches to match siblings like the "All memos" button on the Me page.
 class ActivityHeatmap extends StatelessWidget {
   const ActivityHeatmap({super.key, required this.dayCounts, this.weeks = 16});
 
@@ -11,7 +14,6 @@ class ActivityHeatmap extends StatelessWidget {
   final Map<String, int> dayCounts;
   final int weeks;
 
-  static const _cellSize = 13.0;
   static const _gap = 3.0;
 
   String _keyOf(DateTime d) =>
@@ -53,25 +55,6 @@ class ActivityHeatmap extends StatelessWidget {
       return shades[3];
     }
 
-    Widget cell(int week, int row) {
-      final date = firstMonday.add(Duration(days: week * 7 + row));
-      if (date.isAfter(todayDate)) {
-        return const SizedBox(width: _cellSize, height: _cellSize);
-      }
-      final isToday = date == todayDate;
-      return Container(
-        width: _cellSize,
-        height: _cellSize,
-        decoration: BoxDecoration(
-          color: levelOf(dayCounts[_keyOf(date)] ?? 0),
-          borderRadius: BorderRadius.circular(3),
-          border: isToday
-              ? Border.all(color: AppTheme.brandGreenDark, width: 1.5)
-              : null,
-        ),
-      );
-    }
-
     // Month label above the week column containing the 1st of a month.
     final labels = <int, String>{};
     var lastLabeledMonth = -1;
@@ -83,42 +66,72 @@ class ActivityHeatmap extends StatelessWidget {
       }
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          height: 14,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              for (final entry in labels.entries)
-                Positioned(
-                  left: entry.key * (_cellSize + _gap),
-                  child: Text(
-                    entry.value,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: theme.colorScheme.onSurfaceVariant,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final cellSize = width.isFinite && weeks > 0
+            ? (width - (weeks - 1) * _gap) / weeks
+            : 13.0;
+        final size = cellSize.isFinite && cellSize > 0 ? cellSize : 13.0;
+
+        Widget cell(int week, int row) {
+          final date = firstMonday.add(Duration(days: week * 7 + row));
+          if (date.isAfter(todayDate)) {
+            return const SizedBox.expand();
+          }
+          final isToday = date == todayDate;
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              color: levelOf(dayCounts[_keyOf(date)] ?? 0),
+              borderRadius: BorderRadius.circular(3),
+              border: isToday
+                  ? Border.all(color: AppTheme.brandGreenDark, width: 1.5)
+                  : null,
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: 14,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  for (final entry in labels.entries)
+                    Positioned(
+                      left: entry.key * (size + _gap),
+                      child: Text(
+                        entry.value,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                     ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            for (var row = 0; row < 7; row++)
+              Padding(
+                padding: EdgeInsets.only(bottom: row == 6 ? 0 : _gap),
+                child: SizedBox(
+                  height: size,
+                  child: Row(
+                    children: [
+                      for (var w = 0; w < weeks; w++) ...[
+                        if (w > 0) const SizedBox(width: _gap),
+                        Expanded(child: cell(w, row)),
+                      ],
+                    ],
                   ),
                 ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 4),
-        for (var row = 0; row < 7; row++)
-          Padding(
-            padding: EdgeInsets.only(bottom: row == 6 ? 0 : _gap),
-            child: Row(
-              children: [
-                for (var w = 0; w < weeks; w++) ...[
-                  if (w > 0) const SizedBox(width: _gap),
-                  cell(w, row),
-                ],
-              ],
-            ),
-          ),
-      ],
+              ),
+          ],
+        );
+      },
     );
   }
 }
